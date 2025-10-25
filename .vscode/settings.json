@@ -1,0 +1,50 @@
+{
+    "folders": [
+        {
+            "name": "Root",
+            "path": "."
+        },
+        {
+            "name": "Frontend (App)",
+            "path": "./app"
+        },
+        {
+            "name": "Backend (API)",
+            "path": "./api"
+        }
+    ],
+    "settings": {
+        "typescript.preferences.quoteStyle": "single",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.eslint": "explicit"
+        },
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "files.exclude": {
+            "**/node_modules": true,
+            "**/.git": true,
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true
+        },
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/package-lock.json": true,
+            "**/.next": true,
+            "**/build": true,
+            "**/dist": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "esbenp.prettier-vscode",
+            "bradlc.vscode-tailwindcss",
+            "ms-vscode.vscode-json",
+            "ms-vscode-remote.remote-containers",
+            "ms-vscode.vscode-typescript-next",
+            "formulahendry.auto-rename-tag",
+            "christian-kohler.path-intellisense",
+            "ms-vscode.hexeditor",
+            "rangav.vscode-thunder-client"
+        ]
+    }
+}
