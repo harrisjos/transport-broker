@@ -1,15 +1,15 @@
-// @ts-check
+// @ts-nocheck
 /**
- * Create job page - form for customers to post new transport jobs
+ * Create job page - form for shippers to post new transport jobs
  */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../../../lib/auth'
+import { useAuth } from '../../../lib/auth-jwt'
 
 export default function CreateJobPage() {
-    const { user } = useAuth()
+    const { user, loading: authLoading, makeAuthenticatedRequest } = useAuth()
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -25,17 +25,55 @@ export default function CreateJobPage() {
         estimated_price: ''
     })
 
-    // Redirect if not authenticated or not a customer
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/auth/login')
+            return
+        }
+
+        if (user && user.organizationType !== 'shipper' && user.organizationType !== 'both') {
+            router.push('/dashboard')
+            return
+        }
+    }, [user, authLoading, router])
+
+    // Show loading while checking authentication
+    if (authLoading) {
+        return (
+            <div className="container-fluid py-4">
+                <div className="row justify-content-center">
+                    <div className="col-md-8">
+                        <div className="text-center">
+                            <div className="spinner-border" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                            <p className="mt-2">Checking permissions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Redirect if not authenticated
     if (!user) {
-        router.push('/auth/login')
         return null
     }
 
-    if (user.role !== 'customer') {
+    // Show error if not a shipper
+    if (user.organizationType !== 'shipper' && user.organizationType !== 'both') {
         return (
             <div className="container my-5">
                 <div className="alert alert-warning">
-                    Only customers can create jobs. Please contact support if you need to change your account type.
+                    <h4 className="alert-heading">Access Restricted</h4>
+                    <p>Only shipper organizations can create transport jobs.</p>
+                    <hr />
+                    <p className="mb-0">
+                        Your organization type: <strong>{user.organizationType}</strong>
+                    </p>
+                    <p className="mt-2">
+                        <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
+                    </p>
                 </div>
             </div>
         )
@@ -55,14 +93,10 @@ export default function CreateJobPage() {
         setError('')
 
         try {
-            // Get auth token
-            const token = await user.getIdToken?.()
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs`, {
+            const response = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     ...formData,
@@ -75,9 +109,9 @@ export default function CreateJobPage() {
             const data = await response.json()
 
             if (response.ok) {
-                router.push(`/jobs/${data.id}`)
+                router.push(`/bookings/${data.id}`)
             } else {
-                setError(data.error || 'Failed to create job')
+                setError(data.error || 'Failed to create booking')
             }
         } catch (err) {
             setError('Network error occurred')

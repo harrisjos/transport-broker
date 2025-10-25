@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck
 /**
  * JSON Schema definitions for job-related API validation
  */

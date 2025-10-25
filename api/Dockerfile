@@ -8,13 +8,13 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm install --only=production && npm cache clean --force
 
 # Development dependencies for building
 FROM base AS dev-deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install && npm cache clean --force
 
 # Build stage (if needed for any build steps)
 FROM base AS builder

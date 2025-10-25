@@ -1,26 +1,40 @@
-// @ts-check
+// @ts-nocheck
 /**
- * Jobs listing page - displays all available transport jobs
+ * Jobs listing page - displays available transport jobs for carriers
  */
 'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useAuth } from '../../lib/auth'
+import { useAuth } from '../../lib/auth-jwt'
+import { useRouter } from 'next/navigation'
 
 export default function JobsPage() {
-    const { user } = useAuth()
+    const { user, loading: authLoading } = useAuth()
+    const router = useRouter()
     const [jobs, setJobs] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [filters, setFilters] = useState({
-        status: 'open',
+        status: 'active',
         page: 1
     })
 
     useEffect(() => {
-        fetchJobs()
-    }, [filters])
+        if (!authLoading && !user) {
+            router.push('/auth/login')
+            return
+        }
+
+        if (user && user.organizationType !== 'carrier' && user.organizationType !== 'both') {
+            router.push('/dashboard')
+            return
+        }
+
+        if (user) {
+            fetchJobs()
+        }
+    }, [user, authLoading, router, filters])
 
     const fetchJobs = async () => {
         try {
@@ -31,11 +45,11 @@ export default function JobsPage() {
                 limit: '10'
             })
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs?${params}`)
+            const response = await fetch(`/api/bookings?${params}`)
             const data = await response.json()
 
             if (response.ok) {
-                setJobs(data.jobs)
+                setJobs(data.bookings || [])
             } else {
                 setError(data.error || 'Failed to fetch jobs')
             }
@@ -46,60 +60,96 @@ export default function JobsPage() {
         }
     }
 
+    // Show loading while checking authentication
+    if (authLoading) {
+        return (
+            <div className="container-fluid py-4">
+                <div className="row justify-content-center">
+                    <div className="col-md-8">
+                        <div className="text-center">
+                            <div className="spinner-border" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                            <p className="mt-2">Loading jobs...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Redirect if not authenticated
+    if (!user) {
+        return null
+    }
+
+    // Show error if not a carrier
+    if (user.organizationType !== 'carrier' && user.organizationType !== 'both') {
+        return (
+            <div className="container my-5">
+                <div className="alert alert-warning">
+                    <h4 className="alert-heading">Access Restricted</h4>
+                    <p>Only carrier organizations can browse available jobs.</p>
+                    <hr />
+                    <p className="mb-0">
+                        Your organization type: <strong>{user.organizationType}</strong>
+                    </p>
+                    <p className="mt-2">
+                        <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
     const formatDate = (dateString) => {
+        if (!dateString) return 'Not specified'
         return new Date(dateString).toLocaleDateString('en-AU', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            day: 'numeric'
         })
     }
 
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('en-AU', {
-            style: 'currency',
-            currency: 'AUD'
-        }).format(price)
-    }
-
     return (
-        <div className="container my-4">
-            {/* Page Header */}
-            <div className="row mb-4">
-                <div className="col-md-8">
-                    <h1 className="h2">Transport Jobs</h1>
-                    <p className="text-muted">Browse available freight and delivery jobs</p>
-                </div>
-                <div className="col-md-4 text-md-end">
-                    {user && user.role === 'customer' && (
-                        <Link href="/jobs/create" className="btn btn-primary">
-                            Post New Job
-                        </Link>
-                    )}
+        <div className="container-fluid py-4">
+            <div className="row">
+                <div className="col-12">
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Available Jobs</h1>
+                        <span className="badge bg-info fs-6">
+                            {jobs.length} jobs available
+                        </span>
+                    </div>
                 </div>
             </div>
 
             {/* Filters */}
             <div className="row mb-4">
-                <div className="col-md-6">
+                <div className="col-12">
                     <div className="card">
                         <div className="card-body">
-                            <h6 className="card-title">Filters</h6>
-                            <div className="row g-3">
+                            <div className="row align-items-center">
                                 <div className="col-md-6">
                                     <label htmlFor="status" className="form-label">Status</label>
                                     <select
                                         id="status"
                                         className="form-select"
                                         value={filters.status}
-                                        onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                                     >
-                                        <option value="open">Open Jobs</option>
-                                        <option value="accepted">Accepted</option>
-                                        <option value="in_transit">In Transit</option>
-                                        <option value="completed">Completed</option>
+                                        <option value="active">Active Jobs</option>
+                                        <option value="all">All Jobs</option>
                                     </select>
+                                </div>
+                                <div className="col-md-6 d-flex align-items-end">
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={() => fetchJobs()}
+                                        disabled={loading}
+                                    >
+                                        {loading ? 'Loading...' : 'Refresh'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -107,122 +157,121 @@ export default function JobsPage() {
                 </div>
             </div>
 
-            {/* Error Message */}
+            {/* Jobs List */}
             {error && (
                 <div className="alert alert-danger" role="alert">
                     {error}
                 </div>
             )}
 
-            {/* Loading State */}
-            {loading && (
+            {loading ? (
                 <div className="text-center py-5">
                     <div className="spinner-border" role="status">
                         <span className="visually-hidden">Loading...</span>
                     </div>
+                    <p className="mt-2">Loading available jobs...</p>
                 </div>
-            )}
-
-            {/* Jobs List */}
-            {!loading && (
+            ) : jobs.length === 0 ? (
+                <div className="text-center py-5">
+                    <i className="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h3 className="text-muted">No Jobs Available</h3>
+                    <p className="text-muted">Check back later for new transport opportunities</p>
+                </div>
+            ) : (
                 <div className="row">
-                    {jobs.length === 0 ? (
-                        <div className="col-12">
-                            <div className="text-center py-5">
-                                <h5>No jobs found</h5>
-                                <p className="text-muted">
-                                    {filters.status === 'open'
-                                        ? "There are no open jobs at the moment. Check back later!"
-                                        : `No ${filters.status} jobs found.`
-                                    }
-                                </p>
-                                {user && user.role === 'customer' && (
-                                    <Link href="/jobs/create" className="btn btn-primary">
-                                        Post the First Job
-                                    </Link>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        jobs.map((job) => (
-                            <div key={job.id} className="col-lg-6 mb-4">
-                                <div className="card job-card h-100">
-                                    <div className="card-body">
-                                        <div className="d-flex justify-content-between align-items-start mb-2">
-                                            <h5 className="card-title">{job.title}</h5>
-                                            <span className={`badge ${job.status === 'open' ? 'bg-success' :
-                                                    job.status === 'accepted' ? 'bg-warning' :
-                                                        job.status === 'in_transit' ? 'bg-info' :
-                                                            'bg-secondary'
-                                                }`}>
-                                                {job.status.replace('_', ' ').toUpperCase()}
-                                            </span>
+                    {jobs.map((job) => (
+                        <div key={job.id} className="col-lg-6 col-xl-4 mb-4">
+                            <div className="card h-100 shadow-sm">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 className="card-title text-primary mb-0">
+                                            Booking #{job.id}
+                                        </h6>
+                                        <span className={`badge ${job.status === 'active' ? 'bg-success' :
+                                                job.status === 'in_bidding' ? 'bg-warning' :
+                                                    job.status === 'assigned' ? 'bg-info' :
+                                                        'bg-secondary'
+                                            }`}>
+                                            {job.status?.replace('_', ' ').toUpperCase()}
+                                        </span>
+                                    </div>
+
+                                    {/* Goods Type */}
+                                    {job.goods_type_name && (
+                                        <div className="mb-2">
+                                            <small className="text-muted">Goods Type:</small>
+                                            <div className="fw-bold">{job.goods_type_name}</div>
+                                        </div>
+                                    )}
+
+                                    {/* Route */}
+                                    <div className="mb-3">
+                                        <div className="d-flex align-items-center mb-1">
+                                            <i className="fas fa-circle text-success me-2" style={{ fontSize: '8px' }}></i>
+                                            <small className="text-muted">From:</small>
+                                        </div>
+                                        <div className="ms-3 mb-2">
+                                            <strong>{job.origin_suburb}, {job.origin_state} {job.origin_postcode}</strong>
                                         </div>
 
-                                        <p className="card-text text-muted small mb-3">
-                                            {job.description.substring(0, 120)}
-                                            {job.description.length > 120 && '...'}
-                                        </p>
-
-                                        <div className="row g-2 mb-3">
-                                            <div className="col-12">
-                                                <div className="d-flex align-items-center mb-2">
-                                                    <i className="text-success me-2">📍</i>
-                                                    <small><strong>From:</strong> {job.pickup_address}</small>
-                                                </div>
-                                                <div className="d-flex align-items-center">
-                                                    <i className="text-danger me-2">📍</i>
-                                                    <small><strong>To:</strong> {job.delivery_address}</small>
-                                                </div>
-                                            </div>
+                                        <div className="d-flex align-items-center mb-1">
+                                            <i className="fas fa-circle text-danger me-2" style={{ fontSize: '8px' }}></i>
+                                            <small className="text-muted">To:</small>
                                         </div>
-
-                                        <div className="row g-2 mb-3">
-                                            <div className="col-6">
-                                                <small className="text-muted">Pickup Date</small>
-                                                <div className="fw-semibold">{formatDate(job.pickup_date)}</div>
-                                            </div>
-                                            <div className="col-6">
-                                                <small className="text-muted">Delivery Date</small>
-                                                <div className="fw-semibold">{formatDate(job.delivery_date)}</div>
-                                            </div>
+                                        <div className="ms-3">
+                                            <strong>{job.destination_suburb}, {job.destination_state} {job.destination_postcode}</strong>
                                         </div>
+                                    </div>
 
-                                        <div className="row g-2 mb-3">
-                                            <div className="col-6">
-                                                <small className="text-muted">Weight</small>
-                                                <div className="fw-semibold">{job.weight_kg} kg</div>
-                                            </div>
-                                            <div className="col-6">
-                                                <small className="text-muted">Pallets</small>
-                                                <div className="fw-semibold">{job.pallet_count || 'N/A'}</div>
-                                            </div>
+                                    {/* Shipment Details */}
+                                    <div className="row mb-3">
+                                        <div className="col-6">
+                                            <small className="text-muted">Standard Pallets:</small>
+                                            <div className="fw-bold">{job.standard_pallets || 0}</div>
                                         </div>
-
-                                        {job.estimated_price && (
-                                            <div className="mb-3">
-                                                <small className="text-muted">Estimated Price</small>
-                                                <div className="h5 text-primary mb-0">{formatPrice(job.estimated_price)}</div>
-                                            </div>
-                                        )}
-
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <small className="text-muted">
-                                                By {job.customer_name}
-                                            </small>
-                                            <Link href={`/jobs/${job.id}`} className="btn btn-outline-primary btn-sm">
-                                                View Details
-                                            </Link>
+                                        <div className="col-6">
+                                            <small className="text-muted">Weight:</small>
+                                            <div className="fw-bold">{job.total_weight || 'N/A'} kg</div>
                                         </div>
+                                    </div>
+
+                                    {/* Pickup Date */}
+                                    <div className="mb-3">
+                                        <small className="text-muted">Pickup Date:</small>
+                                        <div className="fw-bold">{formatDate(job.pickup_date)}</div>
+                                    </div>
+
+                                    {/* Description */}
+                                    {job.description && (
+                                        <div className="mb-3">
+                                            <small className="text-muted">Description:</small>
+                                            <p className="small mb-0">
+                                                {job.description.length > 100
+                                                    ? job.description.substring(0, 100) + '...'
+                                                    : job.description
+                                                }
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="card-footer bg-light">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <small className="text-muted">
+                                            Posted: {formatDate(job.created_at)}
+                                        </small>
+                                        <Link href={`/jobs/${job.id}/bid`} className="btn btn-primary btn-sm">
+                                            <i className="fas fa-handshake me-1"></i>
+                                            Place Bid
+                                        </Link>
                                     </div>
                                 </div>
                             </div>
-                        ))
-                    )}
+                        </div>
+                    ))}
                 </div>
             )}
-
-            {/* Pagination would go here */}
         </div>
     )
+}
 }

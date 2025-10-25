@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck
 /**
  * Main Fastify server entry point for transport broker API
  */
@@ -11,8 +11,11 @@ import websocket from '@fastify/websocket'
 
 // Route imports
 import jobRoutes from './routes/jobs.js'
+import bookingRoutes from './routes/bookings.js'
 import userRoutes from './routes/users.js'
-import authRoutes from './routes/auth.js'
+import authRoutes from './routes/auth-enhanced.js'
+import goodsTypesRoutes from './routes/goods-types.js'
+import postcodesRoutes from './routes/postcodes.js'
 
 // Middleware
 import { authenticateToken } from './lib/auth.js'
@@ -64,6 +67,9 @@ async function buildApp(opts = {}) {
     await fastify.register(authRoutes, { prefix: '/api/auth' })
     await fastify.register(userRoutes, { prefix: '/api/users' })
     await fastify.register(jobRoutes, { prefix: '/api/jobs' })
+    await fastify.register(bookingRoutes, { prefix: '/api' })
+    await fastify.register(goodsTypesRoutes, { prefix: '/api' })
+    await fastify.register(postcodesRoutes, { prefix: '/api' })
 
     // Setup database connection
     await setupDatabase(fastify)

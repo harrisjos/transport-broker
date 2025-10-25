@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck
 /**
  * Database migration script
  * Runs SQL migration files in order

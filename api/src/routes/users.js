@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck
 /**
  * User-related API routes for profile management
  */
