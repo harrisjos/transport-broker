@@ -120,8 +120,8 @@ export default function DashboardPage() {
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <h1>Dashboard</h1>
                         <span className="badge bg-primary fs-6">
-                            {user.organizationType === 'both' ? 'Shipper & Carrier' :
-                                user.organizationType === 'shipper' ? 'Shipper' : 'Carrier'}
+                            {user.organisationType === 'both' ? 'Shipper & Carrier' :
+                                user.organisationType === 'shipper' ? 'Shipper' : 'Carrier'}
                         </span>
                     </div>
                 </div>
@@ -336,11 +336,11 @@ export default function DashboardPage() {
                                                     </td>
                                                     <td>
                                                         <span className={`badge ${job.status === 'active' ? 'bg-success' :
-                                                                job.status === 'in_bidding' ? 'bg-warning' :
-                                                                    job.status === 'assigned' ? 'bg-info' :
-                                                                        job.status === 'in_transit' ? 'bg-primary' :
-                                                                            job.status === 'completed' ? 'bg-secondary' :
-                                                                                'bg-light text-dark'
+                                                            job.status === 'in_bidding' ? 'bg-warning' :
+                                                                job.status === 'assigned' ? 'bg-info' :
+                                                                    job.status === 'in_transit' ? 'bg-primary' :
+                                                                        job.status === 'completed' ? 'bg-secondary' :
+                                                                            'bg-light text-dark'
                                                             }`}>
                                                             {job.status?.replace('_', ' ').toUpperCase()}
                                                         </span>

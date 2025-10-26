@@ -3,6 +3,9 @@
  * Main Fastify server entry point for transport broker API
  */
 
+// Load environment variables
+import 'dotenv/config'
+
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
@@ -82,14 +85,18 @@ async function buildApp(opts = {}) {
  */
 async function start() {
     try {
+        console.log('Starting server...')
         const app = await buildApp()
+        console.log('App built successfully')
 
         const port = process.env.PORT || 3001
-        const host = process.env.HOST || '0.0.0.0'
+        const host = process.env.HOST || '127.0.0.1'
 
+        console.log(`Attempting to listen on ${host}:${port}`)
         await app.listen({ port: parseInt(port), host })
 
         app.log.info(`Server listening on http://${host}:${port}`)
+        console.log(`Server listening on http://${host}:${port}`)
     } catch (err) {
         console.error('Error starting server:', err)
         process.exit(1)
@@ -97,7 +104,14 @@ async function start() {
 }
 
 // Start server if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const isMainModule = process.argv[1] === __filename
+
+if (isMainModule) {
+    console.log('Starting server from direct execution...')
     start()
 }
 

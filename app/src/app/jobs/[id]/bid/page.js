@@ -147,7 +147,7 @@ export default function BidPage({ params }) {
                     <p>Only carrier organizations can place bids on jobs.</p>
                     <hr />
                     <p className="mb-0">
-                        Your organization type: <strong>{user.organizationType}</strong>
+                        Your organisation type: <strong>{user.organisationType}</strong>
                     </p>
                     <p className="mt-2">
                         <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>

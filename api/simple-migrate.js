@@ -1,7 +1,6 @@
 // @ts-nocheck
 /**
- * Database migration script
- * Runs SQL migration files in order
+ * Simple migration runner
  */
 
 // Load environment variables
@@ -9,26 +8,25 @@ import 'dotenv/config'
 
 import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
-import { createDatabase } from '../src/lib/database.js'
+import { createDatabase } from './src/lib/database.js'
 import { sql } from 'kysely'
 
-/**
- * Run all migration files
- */
 async function runMigrations() {
     const db = createDatabase()
 
     try {
         console.log('Starting database migrations...')
 
-        // Create migrations tracking table if it doesn't exist
+        // Create migrations tracking table using schema builder
         await db.schema
             .createTable('migrations')
             .ifNotExists()
             .addColumn('id', 'serial', (col) => col.primaryKey())
             .addColumn('filename', 'varchar(255)', (col) => col.notNull().unique())
-            .addColumn('executed_at', 'timestamp', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+            .addColumn('executed_at', 'timestamp', (col) => col.notNull())
             .execute()
+
+        console.log('Migrations table ready')
 
         // Get list of migration files
         const migrationsDir = join(process.cwd(), '..', 'sql', 'migrations')
@@ -39,15 +37,17 @@ async function runMigrations() {
 
         console.log(`Found ${sqlFiles.length} migration files`)
 
-        // Check which migrations have already been run
+        // Check executed migrations
         const executedMigrations = await db
             .selectFrom('migrations')
             .select('filename')
             .execute()
 
         const executedFilenames = new Set(executedMigrations.map(m => m.filename))
+        console.log(`${executedMigrations.length} migrations already executed`)
 
         // Run pending migrations
+        let executed = 0
         for (const filename of sqlFiles) {
             if (executedFilenames.has(filename)) {
                 console.log(`Skipping ${filename} (already executed)`)
@@ -57,21 +57,28 @@ async function runMigrations() {
             console.log(`Running migration: ${filename}`)
 
             const filePath = join(migrationsDir, filename)
-            const sql = await readFile(filePath, 'utf-8')
+            const sqlContent = await readFile(filePath, 'utf-8')
 
-            // Execute the migration (raw SQL)
-            await db.executeQuery(db.raw(sql).compile(db))
+            // Execute the migration
+            const statements = sqlContent.split(';').filter(stmt => stmt.trim().length > 0)
 
-            // Record the migration as executed
+            for (const statement of statements) {
+                if (statement.trim()) {
+                    await db.executeQuery(sql`${sql.raw(statement.trim())}`)
+                }
+            }
+
+            // Record the migration
             await db
                 .insertInto('migrations')
                 .values({ filename })
                 .execute()
 
             console.log(`✅ Completed: ${filename}`)
+            executed++
         }
 
-        console.log('All migrations completed successfully!')
+        console.log(`All migrations completed! (${executed} new migrations executed)`)
 
     } catch (error) {
         console.error('Migration failed:', error)
@@ -81,9 +88,4 @@ async function runMigrations() {
     }
 }
 
-// Run if this script is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-    runMigrations()
-}
-
-export { runMigrations }
+runMigrations()

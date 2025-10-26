@@ -11,11 +11,11 @@ export default function ProfilePage() {
         name: '',
         email: '',
         phone: '',
-        organization: {
+        organisation: {
             name: '',
             abn: '',
             address: '',
-            organizationType: ''
+            organisationType: ''
         }
     })
     const [loading, setLoading] = useState(true)
@@ -45,11 +45,11 @@ export default function ProfilePage() {
                     name: userData.name || '',
                     email: userData.email || '',
                     phone: userData.phone || '',
-                    organization: {
-                        name: userData.organization?.name || '',
-                        abn: userData.organization?.abn || '',
-                        address: userData.organization?.address || '',
-                        organizationType: userData.organization?.organizationType || ''
+                    organisation: {
+                        name: userData.organisation?.name || '',
+                        abn: userData.organisation?.abn || '',
+                        address: userData.organisation?.address || '',
+                        organisationType: userData.organisation?.organisationType || ''
                     }
                 })
             } else {
@@ -196,33 +196,33 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
 
-                                {/* Organization Information */}
-                                <h5 className="border-bottom pb-2 mb-3">Organization Information</h5>
+                                {/* Organisation Information */}
+                                <h5 className="border-bottom pb-2 mb-3">Organisation Information</h5>
                                 <div className="row mb-3">
                                     <div className="col-md-6">
-                                        <label htmlFor="orgName" className="form-label">Organization Name</label>
+                                        <label htmlFor="orgName" className="form-label">Organisation Name</label>
                                         <input
                                             type="text"
                                             className="form-control"
                                             id="orgName"
-                                            value={profile.organization.name}
+                                            value={profile.organisation.name}
                                             onChange={(e) => setProfile(prev => ({
                                                 ...prev,
-                                                organization: { ...prev.organization, name: e.target.value }
+                                                organisation: { ...prev.organisation, name: e.target.value }
                                             }))}
                                             disabled={!editMode}
                                             required
                                         />
                                     </div>
                                     <div className="col-md-6">
-                                        <label htmlFor="orgType" className="form-label">Organization Type</label>
+                                        <label htmlFor="orgType" className="form-label">Organisation Type</label>
                                         <select
                                             className="form-select"
                                             id="orgType"
-                                            value={profile.organization.organizationType}
+                                            value={profile.organisation.organisationType}
                                             onChange={(e) => setProfile(prev => ({
                                                 ...prev,
-                                                organization: { ...prev.organization, organizationType: e.target.value }
+                                                organisation: { ...prev.organisation, organisationType: e.target.value }
                                             }))}
                                             disabled={!editMode}
                                             required
@@ -242,10 +242,10 @@ export default function ProfilePage() {
                                             type="text"
                                             className="form-control"
                                             id="abn"
-                                            value={profile.organization.abn}
+                                            value={profile.organisation.abn}
                                             onChange={(e) => setProfile(prev => ({
                                                 ...prev,
-                                                organization: { ...prev.organization, abn: e.target.value }
+                                                organisation: { ...prev.organisation, abn: e.target.value }
                                             }))}
                                             disabled={!editMode}
                                         />
@@ -259,10 +259,10 @@ export default function ProfilePage() {
                                             className="form-control"
                                             id="address"
                                             rows="3"
-                                            value={profile.organization.address}
+                                            value={profile.organisation.address}
                                             onChange={(e) => setProfile(prev => ({
                                                 ...prev,
-                                                organization: { ...prev.organization, address: e.target.value }
+                                                organisation: { ...prev.organisation, address: e.target.value }
                                             }))}
                                             disabled={!editMode}
                                         />

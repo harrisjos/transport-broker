@@ -1,24 +1,6 @@
 # Docker Compose for local development
 
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: transport_broker
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./sql/migrations:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Redis for caching and sessions
   redis:
     image: redis:7-alpine
@@ -38,31 +20,27 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3001
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: transport_broker
-      DB_USER: postgres
-      DB_PASSWORD: password
+      DATABASE_PATH: /app/data/transport_broker.db
       JWT_SECRET: dev-jwt-secret-change-in-production
+      HOST: 0.0.0.0
       FRONTEND_URL: http://localhost:3000
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_started
     volumes:
       - ./api:/app
       - /app/node_modules
+      - api_data:/app/data
     command: npm run dev
 
   # Frontend App
   app:
     build:
-      context: ./app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./app/Dockerfile
       target: deps
     ports:
       - "3000:3000"
@@ -76,11 +54,12 @@ services:
     depends_on:
       - api
     volumes:
-      - ./app:/app
-      - /app/node_modules
-      - /app/.next
+      - .:/workspace
+      - /workspace/node_modules
+      - /workspace/app/.next
+    working_dir: /workspace/app
     command: npm run dev
 
 volumes:
-  postgres_data:
   redis_data:
+  api_data:

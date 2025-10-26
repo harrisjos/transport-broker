@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '../../../lib/auth-jwt'
+// import { useAuth } from '../../../lib/auth-jwt'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -12,9 +14,9 @@ export default function RegisterPage() {
         confirmPassword: '',
         name: '',
         phone: '',
-        organizationName: '',
-        organizationType: 'shipper',
-        organizationDetails: {
+        organisationName: '',
+        organisationType: 'shipper',
+        organisationDetails: {
             tradingName: '',
             abn: '',
             streetAddress: '',
@@ -28,7 +30,7 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const router = useRouter()
-    const { login } = useAuth()
+    // const { login } = useAuth()
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -37,8 +39,8 @@ export default function RegisterPage() {
             const orgField = name.replace('org.', '')
             setFormData(prev => ({
                 ...prev,
-                organizationDetails: {
-                    ...prev.organizationDetails,
+                organisationDetails: {
+                    ...prev.organisationDetails,
                     [orgField]: value
                 }
             }))
@@ -57,12 +59,14 @@ export default function RegisterPage() {
 
         // Validation
         if (formData.password !== formData.confirmPassword) {
+            toast.error('Passwords do not match', { position: 'top-right' })
             setError('Passwords do not match')
             setLoading(false)
             return
         }
 
         if (formData.password.length < 8) {
+            toast.error('Password must be at least 8 characters long', { position: 'top-right' })
             setError('Password must be at least 8 characters long')
             setLoading(false)
             return
@@ -79,23 +83,28 @@ export default function RegisterPage() {
                     password: formData.password,
                     name: formData.name,
                     phone: formData.phone,
-                    organizationName: formData.organizationName,
-                    organizationType: formData.organizationType,
-                    organizationDetails: formData.organizationDetails
+                    organisationName: formData.organisationName,
+                    organisationType: formData.organisationType,
+                    organisationDetails: formData.organisationDetails
                 }),
             })
 
             const data = await response.json()
 
             if (!response.ok) {
+                toast.error(data.error || 'Registration failed', { position: 'top-right' })
                 throw new Error(data.error || 'Registration failed')
             }
 
             // Auto-login after successful registration
             localStorage.setItem('authToken', data.token)
 
-            // Redirect to dashboard
-            router.push('/dashboard')
+            toast.success('Registration successful!', { position: 'top-right' })
+
+            // Redirect to dashboard after short delay
+            setTimeout(() => {
+                router.push('/dashboard')
+            }, 1200)
 
         } catch (err) {
             setError(err.message || 'Registration failed')
@@ -105,7 +114,8 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="container mt-5">
+        <>
+            <ToastContainer />
             <div className="row justify-content-center">
                 <div className="col-md-8 col-lg-6">
                     <div className="card shadow">
@@ -199,25 +209,25 @@ export default function RegisterPage() {
                                     <h5 className="text-primary mb-3">Organization Information</h5>
 
                                     <div className="mb-3">
-                                        <label htmlFor="organizationName" className="form-label">Organization Name *</label>
+                                        <label htmlFor="organisationName" className="form-label">Organisation Name *</label>
                                         <input
                                             type="text"
                                             className="form-control"
-                                            id="organizationName"
-                                            name="organizationName"
-                                            value={formData.organizationName}
+                                            id="organisationName"
+                                            name="organisationName"
+                                            value={formData.organisationName}
                                             onChange={handleChange}
                                             required
                                         />
                                     </div>
 
                                     <div className="mb-3">
-                                        <label htmlFor="organizationType" className="form-label">Organization Type *</label>
+                                        <label htmlFor="organisationType" className="form-label">Organisation Type *</label>
                                         <select
                                             className="form-select"
-                                            id="organizationType"
-                                            name="organizationType"
-                                            value={formData.organizationType}
+                                            id="organisationType"
+                                            name="organisationType"
+                                            value={formData.organisationType}
                                             onChange={handleChange}
                                             required
                                         >
@@ -297,6 +307,6 @@ export default function RegisterPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     )
 }

@@ -24,7 +24,7 @@ export default function BidReviewPage({ params }) {
             return
         }
 
-        if (user && user.organizationType !== 'shipper' && user.organizationType !== 'both') {
+        if (user && user.organisationType !== 'shipper' && user.organisationType !== 'both') {
             router.push('/dashboard')
             return
         }
@@ -157,15 +157,15 @@ export default function BidReviewPage({ params }) {
     }
 
     // Show error if not a shipper
-    if (user.organizationType !== 'shipper' && user.organizationType !== 'both') {
+    if (user.organisationType !== 'shipper' && user.organisationType !== 'both') {
         return (
             <div className="container my-5">
                 <div className="alert alert-warning">
                     <h4 className="alert-heading">Access Restricted</h4>
-                    <p>Only shipper organizations can review bids.</p>
+                    <p>Only shipper organisations can review bids.</p>
                     <hr />
                     <p className="mb-0">
-                        Your organization type: <strong>{user.organizationType}</strong>
+                        Your organisation type: <strong>{user.organisationType}</strong>
                     </p>
                     <p className="mt-2">
                         <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
@@ -310,7 +310,7 @@ export default function BidReviewPage({ params }) {
                                             <div className="card border-start border-4 border-primary h-100">
                                                 <div className="card-body">
                                                     <div className="d-flex justify-content-between align-items-start mb-3">
-                                                        <h6 className="card-title mb-0">{bid.organization_name}</h6>
+                                                        <h6 className="card-title mb-0">{bid.organisation_name}</h6>
                                                         <span className={`badge ${getBidStatusBadge(bid.status)}`}>
                                                             {bid.status.toUpperCase()}
                                                         </span>

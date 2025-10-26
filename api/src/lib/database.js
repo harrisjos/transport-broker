@@ -3,10 +3,8 @@
  * Database connection and query builder setup using Kysely
  */
 
-import { Kysely, PostgresDialect } from 'kysely'
-import pg from 'pg'
-
-const { Pool } = pg
+import { Kysely, SqliteDialect } from 'kysely'
+import Database from 'better-sqlite3'
 
 /**
  * Database schema interface for type safety
@@ -263,19 +261,15 @@ const { Pool } = pg
  * @returns {Kysely<Database>}
  */
 function createDatabase() {
-    const pool = new Pool({
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '5432'),
-        database: process.env.DB_NAME || 'transport_broker',
-        user: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'password',
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
-    })
+    const dbPath = process.env.DATABASE_PATH || './transport_broker.db'
 
-    const dialect = new PostgresDialect({
-        pool
+    const database = new Database(dbPath)
+
+    // Enable foreign keys for SQLite
+    database.pragma('foreign_keys = ON')
+
+    const dialect = new SqliteDialect({
+        database
     })
 
     return new Kysely({

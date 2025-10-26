@@ -84,15 +84,15 @@ export default function JobsPage() {
     }
 
     // Show error if not a carrier
-    if (user.organizationType !== 'carrier' && user.organizationType !== 'both') {
+    if (user.organisationType !== 'carrier' && user.organisationType !== 'both') {
         return (
             <div className="container my-5">
                 <div className="alert alert-warning">
                     <h4 className="alert-heading">Access Restricted</h4>
-                    <p>Only carrier organizations can browse available jobs.</p>
+                    <p>Only carrier organisations can browse available jobs.</p>
                     <hr />
                     <p className="mb-0">
-                        Your organization type: <strong>{user.organizationType}</strong>
+                        Your organisation type: <strong>{user.organisationType}</strong>
                     </p>
                     <p className="mt-2">
                         <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
@@ -188,9 +188,9 @@ export default function JobsPage() {
                                             Booking #{job.id}
                                         </h6>
                                         <span className={`badge ${job.status === 'active' ? 'bg-success' :
-                                                job.status === 'in_bidding' ? 'bg-warning' :
-                                                    job.status === 'assigned' ? 'bg-info' :
-                                                        'bg-secondary'
+                                            job.status === 'in_bidding' ? 'bg-warning' :
+                                                job.status === 'assigned' ? 'bg-info' :
+                                                    'bg-secondary'
                                             }`}>
                                             {job.status?.replace('_', ' ').toUpperCase()}
                                         </span>
@@ -273,5 +273,4 @@ export default function JobsPage() {
             )}
         </div>
     )
-}
 }

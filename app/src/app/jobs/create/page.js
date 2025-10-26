@@ -31,7 +31,7 @@ export default function CreateJobPage() {
             return
         }
 
-        if (user && user.organizationType !== 'shipper' && user.organizationType !== 'both') {
+        if (user && user.organisationType !== 'shipper' && user.organisationType !== 'both') {
             router.push('/dashboard')
             return
         }
@@ -61,15 +61,15 @@ export default function CreateJobPage() {
     }
 
     // Show error if not a shipper
-    if (user.organizationType !== 'shipper' && user.organizationType !== 'both') {
+    if (user.organisationType !== 'shipper' && user.organisationType !== 'both') {
         return (
             <div className="container my-5">
                 <div className="alert alert-warning">
                     <h4 className="alert-heading">Access Restricted</h4>
-                    <p>Only shipper organizations can create transport jobs.</p>
+                    <p>Only shipper organisations can create transport jobs.</p>
                     <hr />
                     <p className="mb-0">
-                        Your organization type: <strong>{user.organizationType}</strong>
+                        Your organisation type: <strong>{user.organisationType}</strong>
                     </p>
                     <p className="mt-2">
                         <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
