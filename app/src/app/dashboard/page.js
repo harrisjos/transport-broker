@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
-    const { user, loading: authLoading } = useAuth()
+    const { user, loading: authLoading, makeAuthenticatedRequest, getCurrentUser } = useAuth()
     const router = useRouter()
     const [stats, setStats] = useState({
         bookings: { total: 0, active: 0, completed: 0 },
@@ -14,27 +14,22 @@ export default function DashboardPage() {
     })
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        if (!authLoading && !user) {
-            router.push('/auth/login')
-            return
-        }
-
-        if (user) {
-            fetchDashboardData()
-        }
-    }, [user, authLoading, router])
-
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true)
 
+            // Debug: Log user object to see what we have
+            console.log('Dashboard fetchDashboardData called with user:', user)
+            console.log('User organizationType:', user?.organizationType)
+
             // For shippers: Fetch their created jobs
             if (user.organizationType === 'shipper' || user.organizationType === 'both') {
-                const bookingsResponse = await fetch('/api/bookings?my_jobs=true&limit=5')
+                console.log('Fetching bookings for shipper...')
+                const bookingsResponse = await makeAuthenticatedRequest('/api/bookings?my_jobs=true&limit=5')
                 if (bookingsResponse.ok) {
                     const bookingsData = await bookingsResponse.json()
                     const bookings = bookingsData.bookings || []
+                    console.log('Received bookings:', bookings.length)
                     setStats(prev => ({
                         ...prev,
                         bookings: {
@@ -44,14 +39,18 @@ export default function DashboardPage() {
                         },
                         recentActivity: bookings.slice(0, 5)
                     }))
+                } else {
+                    console.error('Bookings request failed:', bookingsResponse.status)
                 }
+            } else {
+                console.log('User is not a shipper, organizationType:', user?.organizationType)
             }
 
             // For carriers: Fetch their accepted jobs
             if (user.organizationType === 'carrier' || user.organizationType === 'both') {
                 try {
                     // Fetch accepted bids/jobs for carrier
-                    const bidsResponse = await fetch('/api/bids/my-accepted?limit=5')
+                    const bidsResponse = await makeAuthenticatedRequest('/api/bids/my-accepted?limit=5')
                     if (bidsResponse.ok) {
                         const bidsData = await bidsResponse.json()
                         const acceptedJobs = bidsData.jobs || []
@@ -87,7 +86,34 @@ export default function DashboardPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [user, makeAuthenticatedRequest])
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/auth/login')
+            return
+        }
+
+        if (user) {
+            // If user object doesn't have organizationType, refresh user data
+            if (!user.organizationType) {
+                console.log('User missing organizationType, refreshing user data...')
+                getCurrentUser().then(() => {
+                    console.log('User data refreshed')
+                })
+            } else {
+                fetchDashboardData()
+            }
+        }
+    }, [user, authLoading, router, fetchDashboardData, getCurrentUser])
+
+    // Trigger fetchDashboardData when user has organizationType
+    useEffect(() => {
+        if (user && user.organizationType) {
+            console.log('User has organizationType, fetching dashboard data...')
+            fetchDashboardData()
+        }
+    }, [user, user?.organizationType, fetchDashboardData])
 
     if (authLoading || loading) {
         return (
@@ -295,7 +321,7 @@ export default function DashboardPage() {
                             </h5>
                             <div>
                                 {isShipper && (
-                                    <a href="/my-jobs" className="btn btn-outline-primary btn-sm me-2">
+                                    <a href="/bookings" className="btn btn-outline-primary btn-sm me-2">
                                         View All Jobs
                                     </a>
                                 )}
@@ -351,11 +377,11 @@ export default function DashboardPage() {
                                                     <td>
                                                         {isShipper && (
                                                             <div className="btn-group" role="group">
-                                                                <a href={`/my-jobs/${job.id}`} className="btn btn-outline-primary btn-sm">
+                                                                <a href={`/bookings/${job.uuid}`} className="btn btn-outline-primary btn-sm">
                                                                     <i className="fas fa-eye"></i>
                                                                 </a>
                                                                 {(job.status === 'in_bidding' || job.status === 'assigned') && (
-                                                                    <a href={`/my-jobs/${job.id}/bids`} className="btn btn-outline-warning btn-sm">
+                                                                    <a href={`/bookings/${job.uuid}/bids`} className="btn btn-outline-warning btn-sm">
                                                                         <i className="fas fa-gavel"></i>
                                                                     </a>
                                                                 )}

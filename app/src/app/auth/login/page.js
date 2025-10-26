@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-// import { useAuth } from '../../../lib/auth-jwt'
+import { useAuth } from '../../../lib/auth-jwt'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -18,7 +18,7 @@ export default function LoginPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const returnUrl = searchParams.get('returnUrl') || '/dashboard'
-    // const { login } = useAuth()
+    const { signIn } = useAuth()
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -35,23 +35,8 @@ export default function LoginPage() {
         setLoading(true)
 
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            })
-
-            const data = await response.json()
-
-            if (!response.ok) {
-                toast.error(data.error || 'Login failed', { position: 'top-right' })
-                throw new Error(data.error || 'Login failed')
-            }
-
-            // Store token and user data
-            localStorage.setItem('authToken', data.token)
+            // Use the signIn function from auth context
+            await signIn(formData.email, formData.password)
 
             toast.success('Login successful!', { position: 'top-right', autoClose: 1000 })
 
@@ -60,6 +45,7 @@ export default function LoginPage() {
 
         } catch (err) {
             setError(err.message || 'Login failed')
+            toast.error(err.message || 'Login failed', { position: 'top-right' })
         } finally {
             setLoading(false)
         }

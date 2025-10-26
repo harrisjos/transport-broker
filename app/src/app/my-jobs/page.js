@@ -345,12 +345,12 @@ export default function MyJobsPage() {
                                             )}
 
                                             {(job.status === 'in_bidding' || job.status === 'assigned') && (
-                                                <Link href={`/my-jobs/${job.id}/bids`} className="btn btn-warning btn-sm">
+                                                <Link href={`/bookings/${job.uuid}/bids`} className="btn btn-warning btn-sm">
                                                     <i className="fas fa-gavel me-1"></i>
                                                     View Bids
                                                 </Link>
                                             )}
-                                            <Link href={`/my-jobs/${job.id}`} className="btn btn-primary btn-sm">
+                                            <Link href={`/bookings/${job.uuid}`} className="btn btn-primary btn-sm">
                                                 <i className="fas fa-eye me-1"></i>
                                                 Details
                                             </Link>

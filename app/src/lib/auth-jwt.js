@@ -169,8 +169,8 @@ export function AuthProvider({ children }) {
             // Store token
             localStorage.setItem('authToken', data.token)
 
-            // Set user data
-            setUser(data.user)
+            // Get full user profile with organization data
+            await getCurrentUser()
 
             return data
         } catch (error) {

@@ -81,8 +81,9 @@ export default async function authRoutes(fastify) {
                 return reply.status(400).send({ error: 'Password must be at least 8 characters long' })
             }
 
-            // Hash password
-            const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
+            // Generate salt and hash password
+            const passwordSalt = await bcrypt.genSalt(SALT_ROUNDS)
+            const passwordHash = await bcrypt.hash(password, passwordSalt)
 
             // Start transaction
             const result = await fastify.db.transaction().execute(async (trx) => {
@@ -113,6 +114,7 @@ export default async function authRoutes(fastify) {
                         name,
                         phone,
                         password_hash: passwordHash,
+                        password_salt: passwordSalt,
                         role: 'customer', // Default role, will be overridden by organization role
                         is_email_verified: false,
                         profile_data: {}
@@ -181,25 +183,16 @@ export default async function authRoutes(fastify) {
         }
 
         try {
-            // Find user (simplified for SQLite without organizations)
+            // Find user (simple approach)
             const user = await fastify.db
                 .selectFrom('users')
-                .select([
-                    'users.id',
-                    'users.email',
-                    'users.name',
-                    'users.phone',
-                    'users.password_hash',
-                    'users.role'
-                ])
-                .where('users.email', '=', email)
+                .selectAll()
+                .where('email', '=', email)
                 .executeTakeFirst()
 
             if (!user) {
                 return reply.status(401).send({ error: 'Invalid email or password' })
-            }
-
-            // For demo purposes - if no password_hash column exists, check for test credentials
+            }            // For demo purposes - if no password_hash column exists, check for test credentials
             if (!user.password_hash) {
                 if (password !== 'password123') {
                     return reply.status(401).send({ error: 'Invalid email or password' })
@@ -223,12 +216,27 @@ export default async function authRoutes(fastify) {
                 // Ignore update errors for now
             }
 
-            // Generate JWT token
+            // Get user's organization info for JWT
+            const userOrg = await fastify.db
+                .selectFrom('user_organizations')
+                .leftJoin('organizations', 'user_organizations.organization_id', 'organizations.id')
+                .where('user_id', '=', user.id)
+                .select([
+                    'user_organizations.organization_id',
+                    'user_organizations.role as org_role',
+                    'organizations.organization_type'
+                ])
+                .executeTakeFirst()
+
+            // Generate JWT token with organization data
             const token = jwt.sign(
                 {
                     userId: user.id,
                     email: user.email,
-                    role: user.role || 'customer'
+                    role: user.role || 'customer',
+                    organizationId: userOrg?.organization_id || null,
+                    orgRole: userOrg?.org_role || null,
+                    orgType: userOrg?.organization_type || null
                 },
                 JWT_SECRET,
                 { expiresIn: '8h' }
@@ -255,54 +263,65 @@ export default async function authRoutes(fastify) {
         try {
             const userId = request.user.uid || request.user.userId
 
-            const userWithOrgs = await fastify.db
-                .selectFrom('users')
-                .innerJoin('user_organizations', 'users.id', 'user_organizations.user_id')
-                .innerJoin('organizations', 'user_organizations.organization_id', 'organizations.id')
-                .select([
-                    'users.id',
-                    'users.email',
-                    'users.name',
-                    'users.phone',
-                    'users.is_email_verified',
-                    'users.last_login_at',
-                    'user_organizations.role as org_role',
-                    'user_organizations.is_primary',
-                    'organizations.id as organization_id',
-                    'organizations.name as organization_name',
-                    'organizations.organization_type'
-                ])
-                .where('users.id', '=', userId)
-                .execute()
+            // Fetch base user information first so we can return something even if joins fail
+            let baseUser
+            try {
+                baseUser = await fastify.db
+                    .selectFrom('users')
+                    .select(['id', 'email', 'name', 'phone', 'is_email_verified', 'last_login_at'])
+                    .where('id', '=', userId)
+                    .executeTakeFirst()
+            } catch (userColumnError) {
+                fastify.log.warn({ userColumnError }, 'Users table missing extended columns; falling back to minimal profile select')
+                baseUser = await fastify.db
+                    .selectFrom('users')
+                    .select(['id', 'email', 'name', 'phone'])
+                    .where('id', '=', userId)
+                    .executeTakeFirst()
+            }
 
-            if (!userWithOrgs.length) {
+            if (!baseUser) {
                 return reply.status(404).send({ error: 'User not found' })
             }
 
-            const user = userWithOrgs[0]
-            const organizations = userWithOrgs.map(row => ({
-                id: row.organization_id,
-                name: row.organization_name,
-                type: row.organization_type,
-                role: row.org_role,
-                is_primary: row.is_primary
-            }))
+            let organizations = []
+            let organizationType
 
-            // Get primary organization type for easier frontend access
-            const primaryOrg = organizations.find(org => org.is_primary)
-            const organizationType = primaryOrg ? primaryOrg.type : organizations[0]?.type
+            // Attempt to load organizations if the linking tables/columns exist
+            try {
+                organizations = await fastify.db
+                    .selectFrom('user_organizations')
+                    .innerJoin('organizations', 'user_organizations.organization_id', 'organizations.id')
+                    .select([
+                        'organizations.id as id',
+                        'organizations.name as name',
+                        'organizations.organization_type as type',
+                        'user_organizations.role as role',
+                        'user_organizations.is_primary as is_primary'
+                    ])
+                    .where('user_organizations.user_id', '=', userId)
+                    .execute()
+
+                const primaryOrg = organizations.find(org => org.is_primary)
+                organizationType = primaryOrg ? primaryOrg.type : organizations[0]?.type
+            } catch (orgError) {
+                // If the join fails due to missing tables/columns, log and continue with empty orgs
+                fastify.log.warn({ orgError }, 'Organization data unavailable; continuing with base user info')
+                organizations = []
+                organizationType = undefined
+            }
 
             return reply.send({
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                phone: user.phone,
-                is_email_verified: user.is_email_verified,
-                last_login_at: user.last_login_at,
-                organizationType, // Add this for easier frontend access (American spelling for compatibility)
-                organisationType: organizationType, // Australian spelling
+                id: baseUser.id,
+                email: baseUser.email,
+                name: baseUser.name,
+                phone: baseUser.phone,
+                is_email_verified: baseUser.is_email_verified ?? false,
+                last_login_at: baseUser.last_login_at ?? null,
+                organizationType,
+                organisationType: organizationType,
                 organizations,
-                organisations: organizations // Australian spelling
+                organisations: organizations
             })
 
         } catch (error) {

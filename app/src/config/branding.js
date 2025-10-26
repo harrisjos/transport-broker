@@ -6,8 +6,8 @@
 
 export const BRANDING = {
     // App Identity
-    appName: 'M8Freight',
-    tagline: 'Connecting shipping SMBs with transport SMBs',
+    appName: 'Fr8 M8s',
+    tagline: 'Creating new Freight Mates, Connecting Shippers with Carriers, without the Middleman',
 
     // Colors
     colors: {
@@ -30,8 +30,8 @@ export const BRANDING = {
     // Branding Assets
     assets: {
         logo: '/images/primary_logo.png',
-        favicon: '/favicon.ico',
-        appleTouchIcon: '/apple-touch-icon.png',
+        favicon: '/images/favicon.ico',
+        appleTouchIcon: '/images/primary_logo.png',
     },
 
     // Typography

@@ -7,15 +7,17 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
+import { getPlatformChargeBreakdown } from '../../../lib/platform-charges'
 
 export default function BidPage({ params }) {
-    const { user, loading: authLoading } = useAuth()
+    const { user, loading: authLoading, makeAuthenticatedRequest } = useAuth()
     const router = useRouter()
     const [job, setJob] = useState(null)
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+    const [platformCharges, setPlatformCharges] = useState(null)
 
     const [bidData, setBidData] = useState({
         amount: '',
@@ -72,6 +74,14 @@ export default function BidPage({ params }) {
             ...prev,
             [name]: value
         }))
+
+        // Calculate platform charges when amount changes
+        if (name === 'amount' && value) {
+            const chargeBreakdown = getPlatformChargeBreakdown(value)
+            setPlatformCharges(chargeBreakdown)
+        } else if (name === 'amount' && !value) {
+            setPlatformCharges(null)
+        }
     }
 
     const handleSubmit = async (e) => {
@@ -81,12 +91,13 @@ export default function BidPage({ params }) {
         setSuccess('')
 
         try {
-            const response = await fetch(`/api/jobs/${params.id}/bids`, {
+            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+            const response = await makeAuthenticatedRequest(`${API_BASE}/api/jobs/${params.id}/bids`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(bidData)
+                body: JSON.stringify({
+                    price: parseFloat(bidData.amount),
+                    message: bidData.notes
+                })
             })
 
             const data = await response.json()
@@ -324,6 +335,54 @@ export default function BidPage({ params }) {
                                         />
                                     </div>
                                 </div>
+
+                                {/* Platform Charges Breakdown */}
+                                {platformCharges && platformCharges.isValid && (
+                                    <div className="row mb-3">
+                                        <div className="col-12">
+                                            <div className="card bg-light">
+                                                <div className="card-header">
+                                                    <h6 className="card-title mb-0">
+                                                        <i className="bi bi-calculator me-2"></i>
+                                                        Payment Breakdown
+                                                    </h6>
+                                                </div>
+                                                <div className="card-body">
+                                                    <div className="row">
+                                                        <div className="col-md-4">
+                                                            <div className="text-muted small">Your Bid Amount</div>
+                                                            <div className="h5 text-primary">{platformCharges.breakdown.formattedBidAmount}</div>
+                                                        </div>
+                                                        <div className="col-md-4">
+                                                            <div className="text-muted small">Platform Charge ({platformCharges.breakdown.platformChargePercentage}%)</div>
+                                                            <div className="h6 text-warning">-{platformCharges.breakdown.formattedPlatformCharge}</div>
+                                                        </div>
+                                                        <div className="col-md-4">
+                                                            <div className="text-muted small">You Will Receive</div>
+                                                            <div className="h4 text-success">{platformCharges.breakdown.formattedCarrierNetAmount}</div>
+                                                        </div>
+                                                    </div>
+                                                    <hr className="my-2" />
+                                                    <small className="text-muted">
+                                                        <i className="bi bi-info-circle me-1"></i>
+                                                        Platform charge: 5% with minimum $25 and maximum $100
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {platformCharges && !platformCharges.isValid && (
+                                    <div className="row mb-3">
+                                        <div className="col-12">
+                                            <div className="alert alert-warning">
+                                                <i className="bi bi-exclamation-triangle me-2"></i>
+                                                {platformCharges.error}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="row">
                                     <div className="col-md-6 mb-3">

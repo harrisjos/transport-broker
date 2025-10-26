@@ -4,6 +4,7 @@
  */
 
 import { jobCreateSchema, jobUpdateSchema, bidCreateSchema } from '../schemas/jobs.js'
+import { calculatePlatformCharge, validateBidAmount } from '../lib/platform-charges.js'
 
 /**
  * Job routes plugin
@@ -249,17 +250,38 @@ export default async function jobRoutes(fastify) {
             return reply.status(400).send({ error: 'You have already submitted a bid for this job' })
         }
 
-        // Create bid
+        // Validate bid amount
+        const validation = validateBidAmount(bidData.price)
+        if (!validation.isValid) {
+            return reply.status(400).send({ error: validation.error })
+        }
+
+        // Calculate platform charges
+        const platformCharges = calculatePlatformCharge(bidData.price)
+
+        // Create bid with platform charge information
         const [bid] = await fastify.db
             .insertInto('bids')
             .values({
                 job_id: parseInt(jobId),
                 carrier_id: user.id,
                 price: bidData.price,
+                platform_charge: platformCharges.platformCharge,
+                carrier_net_amount: platformCharges.carrierNetAmount,
+                platform_charge_percentage: platformCharges.platformChargePercentage,
                 message: bidData.message,
                 status: 'pending'
             })
-            .returning(['id', 'price', 'message', 'status', 'created_at'])
+            .returning([
+                'id',
+                'price',
+                'platform_charge',
+                'carrier_net_amount',
+                'platform_charge_percentage',
+                'message',
+                'status',
+                'created_at'
+            ])
             .execute()
 
         return reply.status(201).send(bid)

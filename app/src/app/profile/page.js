@@ -5,7 +5,7 @@ import { useAuth } from '../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
-    const { user, loading: authLoading, getCurrentUser } = useAuth()
+    const { user, loading: authLoading, getCurrentUser, makeAuthenticatedRequest } = useAuth()
     const router = useRouter()
     const [profile, setProfile] = useState({
         name: '',
@@ -38,7 +38,7 @@ export default function ProfilePage() {
     const loadProfile = async () => {
         try {
             setLoading(true)
-            const response = await fetch('/api/auth/me')
+            const response = await makeAuthenticatedRequest('/api/auth/me')
             if (response.ok) {
                 const userData = await response.json()
                 setProfile({
@@ -70,7 +70,7 @@ export default function ProfilePage() {
         setSuccess('')
 
         try {
-            const response = await fetch('/api/auth/profile', {
+            const response = await makeAuthenticatedRequest('/api/auth/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

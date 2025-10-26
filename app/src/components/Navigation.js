@@ -53,18 +53,12 @@ export default function Navigation() {
 
                 <div className="collapse navbar-collapse" id="navbarNav">
                     <ul className="navbar-nav me-auto">
-                        <li className="nav-item">
-                            <Link href="/jobs" className="nav-link">
-                                <i className="me-1">📋</i>
-                                Browse Jobs
-                            </Link>
-                        </li>
                         {user && (
                             <>
                                 <li className="nav-item">
-                                    <Link href="/jobs/create" className="nav-link">
+                                    <Link href="/bookings/create" className="nav-link">
                                         <i className="me-1">➕</i>
-                                        Post Job
+                                        Post Booking
                                     </Link>
                                 </li>
                                 <li className="nav-item">
@@ -75,9 +69,9 @@ export default function Navigation() {
                                 </li>
                                 {user.userType === 'shipper' && (
                                     <li className="nav-item">
-                                        <Link href="/my-jobs" className="nav-link">
+                                        <Link href="/bookings" className="nav-link">
                                             <i className="me-1">📦</i>
-                                            My Jobs
+                                            My Bookings
                                         </Link>
                                     </li>
                                 )}

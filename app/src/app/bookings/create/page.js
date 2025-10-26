@@ -62,7 +62,8 @@ export default function CreateBooking() {
         },
         // Budget and terms
         budget: {
-            amount: '',
+            minAmount: '',
+            maxAmount: '',
             currency: 'AUD',
             notes: ''
         },
@@ -159,7 +160,12 @@ export default function CreateBooking() {
                 if (!formData.timing.deliveryDate) newErrors['timing.deliveryDate'] = 'Delivery date is required'
                 break
             case 5: // Budget validation
-                if (!formData.budget.amount) newErrors['budget.amount'] = 'Budget amount is required'
+                if (!formData.budget.minAmount) newErrors['budget.minAmount'] = 'Minimum budget amount is required'
+                if (!formData.budget.maxAmount) newErrors['budget.maxAmount'] = 'Maximum budget amount is required'
+                if (formData.budget.minAmount && formData.budget.maxAmount &&
+                    parseFloat(formData.budget.minAmount) > parseFloat(formData.budget.maxAmount)) {
+                    newErrors['budget.maxAmount'] = 'Maximum amount must be greater than minimum amount'
+                }
                 if (!formData.terms.acceptedTerms) newErrors['terms.acceptedTerms'] = 'You must accept the terms and conditions'
                 break
         }
@@ -652,7 +658,7 @@ export default function CreateBooking() {
                                                     id="flexibleTiming"
                                                 />
                                                 <label className="form-check-label" htmlFor="flexibleTiming">
-                                                    I'm flexible with pickup/delivery times
+                                                    I&apos;m flexible with pickup/delivery times
                                                 </label>
                                             </div>
                                         </div>
@@ -669,24 +675,45 @@ export default function CreateBooking() {
 
                                         <div className="row">
                                             <div className="col-md-6 mb-3">
-                                                <label className="form-label">Budget Amount (AUD) *</label>
+                                                <label className="form-label">Minimum Budget (AUD) *</label>
                                                 <div className="input-group">
                                                     <span className="input-group-text">$</span>
                                                     <input
                                                         type="number"
-                                                        className={`form-control ${errors['budget.amount'] ? 'is-invalid' : ''}`}
-                                                        value={formData.budget.amount}
-                                                        onChange={(e) => handleInputChange('budget', 'amount', e.target.value)}
+                                                        className={`form-control ${errors['budget.minAmount'] ? 'is-invalid' : ''}`}
+                                                        value={formData.budget.minAmount}
+                                                        onChange={(e) => handleInputChange('budget', 'minAmount', e.target.value)}
                                                         placeholder="0.00"
                                                         min="0"
                                                         step="0.01"
                                                     />
-                                                    {errors['budget.amount'] && (
-                                                        <div className="invalid-feedback">{errors['budget.amount']}</div>
+                                                    {errors['budget.minAmount'] && (
+                                                        <div className="invalid-feedback">{errors['budget.minAmount']}</div>
                                                     )}
                                                 </div>
                                                 <small className="form-text text-muted">
-                                                    This amount will not be visible to carriers
+                                                    Your minimum acceptable price
+                                                </small>
+                                            </div>
+                                            <div className="col-md-6 mb-3">
+                                                <label className="form-label">Maximum Budget (AUD) *</label>
+                                                <div className="input-group">
+                                                    <span className="input-group-text">$</span>
+                                                    <input
+                                                        type="number"
+                                                        className={`form-control ${errors['budget.maxAmount'] ? 'is-invalid' : ''}`}
+                                                        value={formData.budget.maxAmount}
+                                                        onChange={(e) => handleInputChange('budget', 'maxAmount', e.target.value)}
+                                                        placeholder="0.00"
+                                                        min="0"
+                                                        step="0.01"
+                                                    />
+                                                    {errors['budget.maxAmount'] && (
+                                                        <div className="invalid-feedback">{errors['budget.maxAmount']}</div>
+                                                    )}
+                                                </div>
+                                                <small className="form-text text-muted">
+                                                    Your maximum budget limit
                                                 </small>
                                             </div>
                                         </div>

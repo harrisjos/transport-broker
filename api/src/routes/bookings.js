@@ -66,193 +66,172 @@ export default async function bookingRoutes(fastify) {
     fastify.get('/bookings', {
         preHandler: [fastify.authenticate]
     },
-    /**
-     * @param {any} request
-     * @param {any} reply
-     */
-    async (request, reply) => {
-        try {
-            const { role, organizationId, userId } = /** @type {RequestUser} */ (request.user)
-            const {
-                status,
-                goods_type_id,
-                origin_postcode,
-                destination_postcode,
-                page = 1,
-                limit = 20,
-                my_jobs
-            } = /** @type {BookingQuery} */ (request.query)
+        /**
+         * @param {any} request
+         * @param {any} reply
+         */
+        async (request, reply) => {
+            try {
+                const { role, organizationId, userId } = /** @type {RequestUser} */ (request.user)
+                const {
+                    status,
+                    goods_type_id,
+                    origin_postcode,
+                    destination_postcode,
+                    page = 1,
+                    limit = 20,
+                    my_jobs
+                } = /** @type {BookingQuery} */ (request.query)
 
-            let query = fastify.db
-                .selectFrom('bookings')
-                .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
-                .leftJoin('users', 'bookings.shipper_user_id', 'users.id')
-                .leftJoin('organizations', 'bookings.shipper_org_id', 'organizations.id')
+                let query = fastify.db
+                    .selectFrom('bookings')
+                    .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
+                    .leftJoin('users', 'bookings.shipper_user_id', 'users.id')
+                    .leftJoin('organizations', 'bookings.shipper_org_id', 'organizations.id')
 
-            // Get the user's organization info to determine access
-            const userOrg = await fastify.db
-                .selectFrom('user_organizations')
-                .where('user_id', '=', userId)
-                .selectAll()
-                .executeTakeFirst()
+                // Get the user's organization info to determine access
+                const userOrg = await fastify.db
+                    .selectFrom('user_organizations')
+                    .leftJoin('organizations', 'user_organizations.organization_id', 'organizations.id')
+                    .where('user_id', '=', userId)
+                    .select([
+                        'user_organizations.organization_id',
+                        'user_organizations.role',
+                        'organizations.organization_type'
+                    ])
+                    .executeTakeFirst()
 
-            if (!userOrg) {
-                return reply.code(403).send({ error: 'User organization not found' })
-            }
+                if (!userOrg) {
+                    return reply.code(403).send({ error: 'User organization not found' })
+                }
 
-            const isShipper = userOrg.organization_type === 'shipper' || userOrg.organization_type === 'both'
-            const isCarrier = userOrg.organization_type === 'carrier' || userOrg.organization_type === 'both'
+                const isShipper = userOrg.organization_type === 'shipper' || userOrg.organization_type === 'both'
+                const isCarrier = userOrg.organization_type === 'carrier' || userOrg.organization_type === 'both'
 
-            // Carriers see all open bookings (but without budget information)
-            if (isCarrier && !isShipper) {
-                query = query.select([
-                    'bookings.id',
-                    'bookings.origin_company',
-                    'bookings.origin_suburb',
-                    'bookings.origin_postcode',
-                    'bookings.origin_state',
-                    'bookings.destination_company',
-                    'bookings.destination_suburb',
-                    'bookings.destination_postcode',
-                    'bookings.destination_state',
-                    'bookings.standard_pallets',
-                    'bookings.non_standard_pallets',
-                    'bookings.total_weight',
-                    'bookings.total_volume',
-                    'bookings.description',
-                    'goods_types.name as goods_type_name',
-                    'bookings.pickup_date',
-                    'bookings.pickup_time_from',
-                    'bookings.pickup_time_to',
-                    'bookings.delivery_date',
-                    'bookings.delivery_time_from',
-                    'bookings.delivery_time_to',
-                    'bookings.special_handling',
-                    'bookings.dangerous_goods',
-                    'bookings.fragile_items',
-                    'bookings.insurance_required',
-                    'bookings.tracking_required',
-                    'bookings.status',
-                    'bookings.created_at',
-                    'organizations.name as shipper_organization_name'
-                ])
-                    .where('bookings.status', 'in', ['active', 'in_bidding'])
-            } else {
-                // Shippers see their own bookings with full details including budget
-                query = query.select([
-                    'bookings.id',
-                    'bookings.origin_company',
-                    'bookings.origin_contact',
-                    'bookings.origin_phone',
-                    'bookings.origin_email',
-                    'bookings.origin_address',
-                    'bookings.origin_suburb',
-                    'bookings.origin_postcode',
-                    'bookings.origin_state',
-                    'bookings.origin_special_instructions',
-                    'bookings.destination_company',
-                    'bookings.destination_contact',
-                    'bookings.destination_phone',
-                    'bookings.destination_email',
-                    'bookings.destination_address',
-                    'bookings.destination_suburb',
-                    'bookings.destination_postcode',
-                    'bookings.destination_state',
-                    'bookings.destination_special_instructions',
-                    'bookings.standard_pallets',
-                    'bookings.non_standard_pallets',
-                    'bookings.total_weight',
-                    'bookings.total_volume',
-                    'bookings.budget_amount',
-                    'bookings.budget_currency',
-                    'bookings.budget_notes',
-                    'bookings.description',
-                    'goods_types.name as goods_type_name',
-                    'bookings.pickup_date',
-                    'bookings.pickup_time_from',
-                    'bookings.pickup_time_to',
-                    'bookings.delivery_date',
-                    'bookings.delivery_time_from',
-                    'bookings.delivery_time_to',
-                    'bookings.timing_flexible',
-                    'bookings.special_handling',
-                    'bookings.dangerous_goods',
-                    'bookings.fragile_items',
-                    'bookings.insurance_required',
-                    'bookings.tracking_required',
-                    'bookings.status',
-                    'bookings.created_at',
-                    'bookings.updated_at'
-                ])
-
-                // Filter by user's organization
-                if (my_jobs === 'true') {
-                    // For dashboard: only show user's own jobs
-                    query = query.where('bookings.shipper_user_id', '=', userId)
+                // Carriers see all open bookings (but without budget information)
+                if (isCarrier && !isShipper) {
+                    query = query.select([
+                        'bookings.id',
+                        'bookings.origin_name as origin_company',
+                        'bookings.origin_suburb',
+                        'bookings.origin_postcode',
+                        'bookings.origin_state',
+                        'bookings.destination_name as destination_company',
+                        'bookings.destination_suburb',
+                        'bookings.destination_postcode',
+                        'bookings.destination_state',
+                        'bookings.pallets',
+                        'bookings.description',
+                        'goods_types.name as goods_type_name',
+                        'bookings.collection_date_requested as pickup_date',
+                        'bookings.delivery_date_requested as delivery_date',
+                        'bookings.special_requirements',
+                        'bookings.requires_tailgate',
+                        'bookings.requires_crane',
+                        'bookings.requires_forklift',
+                        'bookings.status',
+                        'bookings.created_at',
+                        'organizations.name as shipper_organization_name'
+                    ])
+                        .where('bookings.status', 'in', ['active', 'in_bidding'])
                 } else {
-                    // For regular booking list: show all jobs from user's organization
-                    query = query.where('bookings.shipper_org_id', '=', organizationId)
+                    // Shippers see their own bookings with full details including budget
+                    query = query.select([
+                        'bookings.id',
+                        'bookings.origin_name as origin_company',
+                        'bookings.origin_street_address as origin_address',
+                        'bookings.origin_suburb',
+                        'bookings.origin_postcode',
+                        'bookings.origin_state',
+                        'bookings.destination_name as destination_company',
+                        'bookings.destination_street_address as destination_address',
+                        'bookings.destination_suburb',
+                        'bookings.destination_postcode',
+                        'bookings.destination_state',
+                        'bookings.pallets',
+                        'bookings.budget_minimum',
+                        'bookings.budget_maximum',
+                        'bookings.description',
+                        'goods_types.name as goods_type_name',
+                        'bookings.collection_date_requested as pickup_date',
+                        'bookings.delivery_date_requested as delivery_date',
+                        'bookings.special_requirements',
+                        'bookings.requires_tailgate',
+                        'bookings.requires_crane',
+                        'bookings.requires_forklift',
+                        'bookings.status',
+                        'bookings.created_at',
+                        'bookings.updated_at'
+                    ])
+
+                    // Filter by user's organization
+                    if (my_jobs === 'true') {
+                        // For dashboard: show all jobs from user's organization
+                        query = query.where('bookings.shipper_org_id', '=', organizationId)
+                    } else {
+                        // For regular booking list: show all jobs from user's organization  
+                        query = query.where('bookings.shipper_org_id', '=', organizationId)
+                    }
                 }
-            }
 
-            // Apply filters
-            if (status) {
-                query = query.where('bookings.status', '=', status)
-            }
-            if (goods_type_id) {
-                query = query.where('bookings.goods_type_id', '=', goods_type_id)
-            }
-            if (origin_postcode) {
-                query = query.where('bookings.origin_postcode', '=', origin_postcode)
-            }
-            if (destination_postcode) {
-                query = query.where('bookings.destination_postcode', '=', destination_postcode)
-            }
-
-            // Pagination
-            const pageNum = Number(page)
-            const limitNum = Number(limit) || 1
-            const offset = (pageNum - 1) * limitNum
-            query = query.limit(limitNum).offset(offset).orderBy('bookings.created_at', 'desc')
-
-            /** @type {Booking[]} */
-            const bookings = await query.execute()
-
-            // Get total count for pagination
-            let countQuery = fastify.db
-                .selectFrom('bookings')
-                .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
-
-            if (isCarrier && !isShipper) {
-                countQuery = countQuery.where('bookings.status', 'in', ['active', 'in_bidding'])
-            } else {
-                countQuery = countQuery.where('bookings.shipper_org_id', '=', organizationId)
-            }
-
-            // Apply same filters to count
-            if (status) countQuery = countQuery.where('bookings.status', '=', status)
-            if (goods_type_id) countQuery = countQuery.where('bookings.goods_type_id', '=', goods_type_id)
-            if (origin_postcode) countQuery = countQuery.where('bookings.origin_postcode', '=', origin_postcode)
-            if (destination_postcode) countQuery = countQuery.where('bookings.destination_postcode', '=', destination_postcode)
-
-            /** @type {{ total: string | number } | undefined} */
-            const totalResult = await countQuery.select(fastify.db.fn.count('bookings.id').as('total')).executeTakeFirst()
-            const total = Number(totalResult?.total ?? 0)
-
-            return reply.send({
-                bookings,
-                pagination: {
-                    page: pageNum,
-                    limit: limitNum,
-                    total,
-                    pages: Math.ceil(total / limitNum)
+                // Apply filters
+                if (status) {
+                    query = query.where('bookings.status', '=', status)
                 }
-            })
-        } catch (error) {
-            request.log.error(error)
-            return reply.code(500).send({ error: 'Failed to fetch bookings' })
-        }
-    })
+                if (goods_type_id) {
+                    query = query.where('bookings.goods_type_id', '=', goods_type_id)
+                }
+                if (origin_postcode) {
+                    query = query.where('bookings.origin_postcode', '=', origin_postcode)
+                }
+                if (destination_postcode) {
+                    query = query.where('bookings.destination_postcode', '=', destination_postcode)
+                }
+
+                // Pagination
+                const pageNum = Number(page)
+                const limitNum = Number(limit) || 1
+                const offset = (pageNum - 1) * limitNum
+                query = query.limit(limitNum).offset(offset).orderBy('bookings.created_at', 'desc')
+
+                /** @type {Booking[]} */
+                const bookings = await query.execute()
+
+                // Get total count for pagination
+                let countQuery = fastify.db
+                    .selectFrom('bookings')
+                    .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
+
+                if (isCarrier && !isShipper) {
+                    countQuery = countQuery.where('bookings.status', 'in', ['active', 'in_bidding'])
+                } else {
+                    countQuery = countQuery.where('bookings.shipper_org_id', '=', organizationId)
+                }
+
+                // Apply same filters to count
+                if (status) countQuery = countQuery.where('bookings.status', '=', status)
+                if (goods_type_id) countQuery = countQuery.where('bookings.goods_type_id', '=', goods_type_id)
+                if (origin_postcode) countQuery = countQuery.where('bookings.origin_postcode', '=', origin_postcode)
+                if (destination_postcode) countQuery = countQuery.where('bookings.destination_postcode', '=', destination_postcode)
+
+                /** @type {{ total: string | number } | undefined} */
+                const totalResult = await countQuery.select(fastify.db.fn.count('bookings.id').as('total')).executeTakeFirst()
+                const total = Number(totalResult?.total ?? 0)
+
+                return reply.send({
+                    bookings,
+                    pagination: {
+                        page: pageNum,
+                        limit: limitNum,
+                        total,
+                        pages: Math.ceil(total / limitNum)
+                    }
+                })
+            } catch (error) {
+                request.log.error(error)
+                return reply.code(500).send({ error: 'Failed to fetch bookings' })
+            }
+        })
 
     // Get single booking by ID
     /**
@@ -265,103 +244,103 @@ export default async function bookingRoutes(fastify) {
     fastify.get('/bookings/:id', {
         preHandler: [fastify.authenticate]
     },
-    /**
-     * @param {any} request
-     * @param {any} reply
-     */
-    async (request, reply) => {
-        try {
-            const { id } = request.params
-            const { organizationId, userId } = request.user
+        /**
+         * @param {any} request
+         * @param {any} reply
+         */
+        async (request, reply) => {
+            try {
+                const { id } = request.params
+                const { organizationId, userId } = request.user
 
-            // Get the user's organization info to determine access
-            const userOrg = /** @type {UserOrganization | undefined} */ (await fastify.db
-                .selectFrom('user_organizations')
-                .where('user_id', '=', userId)
-                .selectAll()
-                .executeTakeFirst())
+                // Get the user's organization info to determine access
+                const userOrg = /** @type {UserOrganization | undefined} */ (await fastify.db
+                    .selectFrom('user_organizations')
+                    .where('user_id', '=', userId)
+                    .selectAll()
+                    .executeTakeFirst())
 
-            if (!userOrg) {
-                return reply.code(403).send({ error: 'User organization not found' })
+                if (!userOrg) {
+                    return reply.code(403).send({ error: 'User organization not found' })
+                }
+
+                const isShipper = userOrg.organization_type === 'shipper' || userOrg.organization_type === 'both'
+                const isCarrier = userOrg.organization_type === 'carrier' || userOrg.organization_type === 'both'
+
+                let query = fastify.db
+                    .selectFrom('bookings')
+                    .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
+                    .leftJoin('users', 'bookings.shipper_user_id', 'users.id')
+                    .leftJoin('organizations', 'bookings.shipper_org_id', 'organizations.id')
+                    .where('bookings.id', '=', id)
+
+                if (isCarrier && !isShipper) {
+                    // Carriers can see active bookings without budget info
+                    query = query.select([
+                        'bookings.id',
+                        'bookings.origin_company',
+                        'bookings.origin_contact',
+                        'bookings.origin_phone',
+                        'bookings.origin_address',
+                        'bookings.origin_suburb',
+                        'bookings.origin_postcode',
+                        'bookings.origin_state',
+                        'bookings.origin_special_instructions',
+                        'bookings.destination_company',
+                        'bookings.destination_contact',
+                        'bookings.destination_phone',
+                        'bookings.destination_address',
+                        'bookings.destination_suburb',
+                        'bookings.destination_postcode',
+                        'bookings.destination_state',
+                        'bookings.destination_special_instructions',
+                        'bookings.standard_pallets',
+                        'bookings.non_standard_pallets',
+                        'bookings.total_weight',
+                        'bookings.total_volume',
+                        'bookings.description',
+                        'goods_types.name as goods_type_name',
+                        'bookings.pickup_date',
+                        'bookings.pickup_time_from',
+                        'bookings.pickup_time_to',
+                        'bookings.delivery_date',
+                        'bookings.delivery_time_from',
+                        'bookings.delivery_time_to',
+                        'bookings.timing_flexible',
+                        'bookings.special_handling',
+                        'bookings.dangerous_goods',
+                        'bookings.fragile_items',
+                        'bookings.insurance_required',
+                        'bookings.tracking_required',
+                        'bookings.status',
+                        'bookings.created_at',
+                        'organizations.name as shipper_organization_name'
+                    ])
+                        .where('bookings.status', 'in', ['active', 'in_bidding'])
+                } else {
+                    // Shippers can see their own bookings with all details
+                    query = query.selectAll('bookings')
+                        .select(['goods_types.name as goods_type_name'])
+                        .where('bookings.shipper_org_id', '=', organizationId)
+                }
+
+                const booking = /** @type {Booking | undefined} */ (await query.executeTakeFirst())
+
+                if (!booking) {
+                    return reply.code(404).send({ error: 'Booking not found' })
+                }
+
+                // Parse JSON fields
+                if (booking.non_standard_pallets) {
+                    booking.non_standard_pallets = JSON.parse(booking.non_standard_pallets)
+                }
+
+                return reply.send(booking)
+            } catch (error) {
+                request.log.error(error)
+                return reply.code(500).send({ error: 'Failed to fetch booking' })
             }
-
-            const isShipper = userOrg.organization_type === 'shipper' || userOrg.organization_type === 'both'
-            const isCarrier = userOrg.organization_type === 'carrier' || userOrg.organization_type === 'both'
-
-            let query = fastify.db
-                .selectFrom('bookings')
-                .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
-                .leftJoin('users', 'bookings.shipper_user_id', 'users.id')
-                .leftJoin('organizations', 'bookings.shipper_org_id', 'organizations.id')
-                .where('bookings.id', '=', id)
-
-            if (isCarrier && !isShipper) {
-                // Carriers can see active bookings without budget info
-                query = query.select([
-                    'bookings.id',
-                    'bookings.origin_company',
-                    'bookings.origin_contact',
-                    'bookings.origin_phone',
-                    'bookings.origin_address',
-                    'bookings.origin_suburb',
-                    'bookings.origin_postcode',
-                    'bookings.origin_state',
-                    'bookings.origin_special_instructions',
-                    'bookings.destination_company',
-                    'bookings.destination_contact',
-                    'bookings.destination_phone',
-                    'bookings.destination_address',
-                    'bookings.destination_suburb',
-                    'bookings.destination_postcode',
-                    'bookings.destination_state',
-                    'bookings.destination_special_instructions',
-                    'bookings.standard_pallets',
-                    'bookings.non_standard_pallets',
-                    'bookings.total_weight',
-                    'bookings.total_volume',
-                    'bookings.description',
-                    'goods_types.name as goods_type_name',
-                    'bookings.pickup_date',
-                    'bookings.pickup_time_from',
-                    'bookings.pickup_time_to',
-                    'bookings.delivery_date',
-                    'bookings.delivery_time_from',
-                    'bookings.delivery_time_to',
-                    'bookings.timing_flexible',
-                    'bookings.special_handling',
-                    'bookings.dangerous_goods',
-                    'bookings.fragile_items',
-                    'bookings.insurance_required',
-                    'bookings.tracking_required',
-                    'bookings.status',
-                    'bookings.created_at',
-                    'organizations.name as shipper_organization_name'
-                ])
-                    .where('bookings.status', 'in', ['active', 'in_bidding'])
-            } else {
-                // Shippers can see their own bookings with all details
-                query = query.selectAll('bookings')
-                    .select(['goods_types.name as goods_type_name'])
-                    .where('bookings.shipper_org_id', '=', organizationId)
-            }
-
-            const booking = /** @type {Booking | undefined} */ (await query.executeTakeFirst())
-
-            if (!booking) {
-                return reply.code(404).send({ error: 'Booking not found' })
-            }
-
-            // Parse JSON fields
-            if (booking.non_standard_pallets) {
-                booking.non_standard_pallets = JSON.parse(booking.non_standard_pallets)
-            }
-
-            return reply.send(booking)
-        } catch (error) {
-            request.log.error(error)
-            return reply.code(500).send({ error: 'Failed to fetch booking' })
-        }
-    })
+        })
 
     // Create new booking (shippers only)
     /**
@@ -476,43 +455,43 @@ export default async function bookingRoutes(fastify) {
             }
         }
     },
-    /**
-     * @param {{ body: BookingCreateBody, user: RequestUser }} request
-     * @param {any} reply
-     */
-    async (request, reply) => {
-        try {
-            const { userId, organizationId, role } = request.user
+        /**
+         * @param {{ body: BookingCreateBody, user: RequestUser }} request
+         * @param {any} reply
+         */
+        async (request, reply) => {
+            try {
+                const { userId, organizationId, role } = request.user
 
-            // Only shippers can create bookings
-            if (role !== 'shipper' && role !== 'admin') {
-                return reply.status(403).send({ error: 'Only shippers can create bookings' })
+                // Only shippers can create bookings
+                if (role !== 'shipper' && role !== 'admin') {
+                    return reply.status(403).send({ error: 'Only shippers can create bookings' })
+                }
+
+                /** @type {BookingInsert} */
+                const bookingData = {
+                    shipper_user_id: userId,
+                    shipper_org_id: organizationId,
+                    ...request.body,
+                    pallets: JSON.stringify(request.body.pallets),
+                    status: 'draft'
+                }
+
+                const [booking] = /** @type {{ id: number; status: string; created_at: string }[]} */ (await fastify.db
+                    .insertInto('bookings')
+                    .values(bookingData)
+                    .returning([
+                        'id', 'status', 'created_at'
+                    ])
+                    .execute())
+
+                return reply.status(201).send({ booking })
+
+            } catch (error) {
+                fastify.log.error('Error creating booking:', error)
+                return reply.status(500).send({ error: 'Internal server error' })
             }
-
-            /** @type {BookingInsert} */
-            const bookingData = {
-                shipper_user_id: userId,
-                shipper_org_id: organizationId,
-                ...request.body,
-                pallets: JSON.stringify(request.body.pallets),
-                status: 'draft'
-            }
-
-            const [booking] = /** @type {{ id: number; status: string; created_at: string }[]} */ (await fastify.db
-                .insertInto('bookings')
-                .values(bookingData)
-                .returning([
-                    'id', 'status', 'created_at'
-                ])
-                .execute())
-
-            return reply.status(201).send({ booking })
-
-        } catch (error) {
-            fastify.log.error('Error creating booking:', error)
-            return reply.status(500).send({ error: 'Internal server error' })
-        }
-    })
+        })
 
     // Update booking
     /**
@@ -559,55 +538,55 @@ export default async function bookingRoutes(fastify) {
 
     fastify.put('/bookings/:id', {
         preHandler: [fastify.authenticate]
-    }, 
-    /**
-     * @param {{ params: { id: number | string }, body: BookingUpdateBody, user: RequestUser }} request
-     * @param {any} reply
-     */
-    async (request, reply) => {
-        try {
-            const { id } = request.params
-            const { userId, organizationId } = request.user
+    },
+        /**
+         * @param {{ params: { id: number | string }, body: BookingUpdateBody, user: RequestUser }} request
+         * @param {any} reply
+         */
+        async (request, reply) => {
+            try {
+                const { id } = request.params
+                const { userId, organizationId } = request.user
 
-            // Ensure user owns the booking
-            const existingBooking = /** @type {ExistingBookingRecord | undefined} */ (await fastify.db
-                .selectFrom('bookings')
-                .select(['id', 'shipper_user_id', 'shipper_org_id', 'status'])
-                .where('id', '=', id)
-                .where('shipper_org_id', '=', organizationId)
-                .executeTakeFirst())
+                // Ensure user owns the booking
+                const existingBooking = /** @type {ExistingBookingRecord | undefined} */ (await fastify.db
+                    .selectFrom('bookings')
+                    .select(['id', 'shipper_user_id', 'shipper_org_id', 'status'])
+                    .where('id', '=', id)
+                    .where('shipper_org_id', '=', organizationId)
+                    .executeTakeFirst())
 
-            if (!existingBooking) {
-                return reply.status(404).send({ error: 'Booking not found' })
+                if (!existingBooking) {
+                    return reply.status(404).send({ error: 'Booking not found' })
+                }
+
+                if (existingBooking.status !== 'draft') {
+                    return reply.status(400).send({ error: 'Cannot modify booking after it has been published' })
+                }
+
+                /** @type {BookingUpdateBody & Record<string, any>} */
+                const updateData = { ...request.body }
+                if (updateData.pallets) {
+                    updateData.pallets = JSON.stringify(updateData.pallets)
+                }
+
+                const [updatedBooking] = /** @type {UpdatedBookingResult[]} */ (await fastify.db
+                    .updateTable('bookings')
+                    .set({
+                        ...updateData,
+                        updated_at: new Date()
+                    })
+                    .where('id', '=', id)
+                    .returning(['id', 'status', 'updated_at'])
+                    .execute())
+
+                return reply.send({ booking: updatedBooking })
+
+            } catch (error) {
+                fastify.log.error('Error updating booking:', error)
+                return reply.status(500).send({ error: 'Internal server error' })
             }
-
-            if (existingBooking.status !== 'draft') {
-                return reply.status(400).send({ error: 'Cannot modify booking after it has been published' })
-            }
-
-            /** @type {BookingUpdateBody & Record<string, any>} */
-            const updateData = { ...request.body }
-            if (updateData.pallets) {
-                updateData.pallets = JSON.stringify(updateData.pallets)
-            }
-
-            const [updatedBooking] = /** @type {UpdatedBookingResult[]} */ (await fastify.db
-                .updateTable('bookings')
-                .set({
-                    ...updateData,
-                    updated_at: new Date()
-                })
-                .where('id', '=', id)
-                .returning(['id', 'status', 'updated_at'])
-                .execute())
-
-            return reply.send({ booking: updatedBooking })
-
-        } catch (error) {
-            fastify.log.error('Error updating booking:', error)
-            return reply.status(500).send({ error: 'Internal server error' })
-        }
-    })
+        })
 
     // Publish booking (make it available for carriers to bid on)
     /**
@@ -623,37 +602,185 @@ export default async function bookingRoutes(fastify) {
     fastify.post('/bookings/:id/publish', {
         preHandler: [fastify.authenticate]
     },
-    /**
-     * @param {{ params: PublishBookingParams, user: RequestUser }} request
-     * @param {any} reply
-     */
-    async (request, reply) => {
-        try {
-            const { id } = request.params
-            const { organizationId } = request.user
+        /**
+         * @param {{ params: PublishBookingParams, user: RequestUser }} request
+         * @param {any} reply
+         */
+        async (request, reply) => {
+            try {
+                const { id } = request.params
+                const { organizationId } = request.user
 
-            const [updatedBooking] = /** @type {PublishedBookingRecord[] } */ (await fastify.db
-                .updateTable('bookings')
-                .set({
-                    status: 'open',
-                    published_at: new Date(),
-                    updated_at: new Date()
-                })
-                .where('id', '=', id)
-                .where('shipper_org_id', '=', organizationId)
-                .where('status', '=', 'draft')
-                .returning(['id', 'status', 'published_at'])
-                .execute())
+                const [updatedBooking] = /** @type {PublishedBookingRecord[] } */ (await fastify.db
+                    .updateTable('bookings')
+                    .set({
+                        status: 'open',
+                        published_at: new Date(),
+                        updated_at: new Date()
+                    })
+                    .where('id', '=', id)
+                    .where('shipper_org_id', '=', organizationId)
+                    .where('status', '=', 'draft')
+                    .returning(['id', 'status', 'published_at'])
+                    .execute())
 
-            if (!updatedBooking) {
-                return reply.status(404).send({ error: 'Booking not found or cannot be published' })
+                if (!updatedBooking) {
+                    return reply.status(404).send({ error: 'Booking not found or cannot be published' })
+                }
+
+                return reply.send({ booking: updatedBooking })
+
+            } catch (error) {
+                fastify.log.error('Error publishing booking:', error)
+                return reply.status(500).send({ error: 'Internal server error' })
             }
+        })
 
-            return reply.send({ booking: updatedBooking })
+    // Get booking by UUID (secure access without exposing internal IDs)
+    fastify.get('/bookings/uuid/:uuid', {
+        preHandler: [fastify.authenticate]
+    },
+        /**
+         * @param {any} request
+         * @param {any} reply
+         */
+        async (request, reply) => {
+            try {
+                const { uuid } = request.params
+                const { organizationId, userId } = request.user
 
-        } catch (error) {
-            fastify.log.error('Error publishing booking:', error)
-            return reply.status(500).send({ error: 'Internal server error' })
-        }
-    })
+                // Validate UUID format
+                if (!uuid || typeof uuid !== 'string' || uuid.length < 10) {
+                    return reply.code(400).send({ error: 'Invalid UUID format' })
+                }
+
+                // Get the user's organization info to determine access
+                const userOrg = /** @type {UserOrganization | undefined} */ (await fastify.db
+                    .selectFrom('user_organizations')
+                    .where('user_id', '=', userId)
+                    .selectAll()
+                    .executeTakeFirst())
+
+                if (!userOrg) {
+                    return reply.code(403).send({ error: 'User organization not found' })
+                }
+
+                const isShipper = userOrg.organization_type === 'shipper' || userOrg.organization_type === 'both'
+                const isCarrier = userOrg.organization_type === 'carrier' || userOrg.organization_type === 'both'
+
+                let query = fastify.db
+                    .selectFrom('bookings')
+                    .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
+                    .leftJoin('users', 'bookings.shipper_user_id', 'users.id')
+                    .leftJoin('organizations', 'bookings.shipper_org_id', 'organizations.id')
+                    .where('bookings.uuid', '=', uuid)
+
+                if (isCarrier && !isShipper) {
+                    // Carriers can see active bookings without budget info (unless they own the booking)
+                    query = query.select([
+                        'bookings.id',
+                        'bookings.uuid',
+                        'bookings.origin_name',
+                        'bookings.origin_street_address',
+                        'bookings.origin_building',
+                        'bookings.origin_suburb',
+                        'bookings.origin_postcode',
+                        'bookings.origin_state',
+                        'bookings.origin_country',
+                        'bookings.destination_name',
+                        'bookings.destination_street_address',
+                        'bookings.destination_building',
+                        'bookings.destination_suburb',
+                        'bookings.destination_postcode',
+                        'bookings.destination_state',
+                        'bookings.destination_country',
+                        'bookings.pallets',
+                        'bookings.description',
+                        'bookings.collection_date_minimum',
+                        'bookings.collection_date_requested',
+                        'bookings.collection_date_maximum',
+                        'bookings.delivery_date_minimum',
+                        'bookings.delivery_date_requested',
+                        'bookings.delivery_date_maximum',
+                        'bookings.special_requirements',
+                        'bookings.requires_tailgate',
+                        'bookings.requires_crane',
+                        'bookings.requires_forklift',
+                        'bookings.status',
+                        'bookings.created_at',
+                        'bookings.updated_at',
+                        'goods_types.name as goods_type_name',
+                        'users.name as shipper_name',
+                        'organizations.name as shipper_organization_name'
+                    ])
+                } else {
+                    // Shippers or organization members can see full booking details including budget
+                    query = query.select([
+                        'bookings.id',
+                        'bookings.uuid',
+                        'bookings.shipper_user_id',
+                        'bookings.shipper_org_id',
+                        'bookings.origin_name',
+                        'bookings.origin_street_address',
+                        'bookings.origin_building',
+                        'bookings.origin_suburb',
+                        'bookings.origin_postcode',
+                        'bookings.origin_state',
+                        'bookings.origin_country',
+                        'bookings.origin_latitude',
+                        'bookings.origin_longitude',
+                        'bookings.destination_name',
+                        'bookings.destination_street_address',
+                        'bookings.destination_building',
+                        'bookings.destination_suburb',
+                        'bookings.destination_postcode',
+                        'bookings.destination_state',
+                        'bookings.destination_country',
+                        'bookings.destination_latitude',
+                        'bookings.destination_longitude',
+                        'bookings.pallets',
+                        'bookings.budget_minimum',
+                        'bookings.budget_maximum',
+                        'bookings.description',
+                        'bookings.goods_type_id',
+                        'bookings.collection_date_minimum',
+                        'bookings.collection_date_requested',
+                        'bookings.collection_date_maximum',
+                        'bookings.delivery_date_minimum',
+                        'bookings.delivery_date_requested',
+                        'bookings.delivery_date_maximum',
+                        'bookings.special_requirements',
+                        'bookings.requires_tailgate',
+                        'bookings.requires_crane',
+                        'bookings.requires_forklift',
+                        'bookings.status',
+                        'bookings.selected_bid_id',
+                        'bookings.created_at',
+                        'bookings.updated_at',
+                        'bookings.published_at',
+                        'bookings.closed_at',
+                        'goods_types.name as goods_type_name',
+                        'users.name as shipper_name',
+                        'organizations.name as shipper_organization_name'
+                    ])
+                }
+
+                const booking = await query.executeTakeFirst()
+
+                if (!booking) {
+                    return reply.code(404).send({ error: 'Booking not found' })
+                }
+
+                // Additional access control: shippers can only see their own bookings in detail
+                if (isShipper && booking.shipper_org_id !== organizationId) {
+                    return reply.code(403).send({ error: 'Access denied' })
+                }
+
+                return reply.send(booking)
+
+            } catch (error) {
+                fastify.log.error('Error fetching booking by UUID:', error)
+                return reply.status(500).send({ error: 'Internal server error' })
+            }
+        })
 }

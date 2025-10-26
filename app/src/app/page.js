@@ -34,7 +34,7 @@ export default function HomePage() {
                         {BRANDING.tagline}
                     </h2>
                     <p className="lead mb-4 text-muted">
-                        The premier marketplace for transport and logistics. Post your freight jobs or find delivery opportunities in seconds.
+                        The premier marketplace for transport and logistics. Post your freight bookings or find delivery opportunities in seconds.
                     </p>
 
                     {/* Mobile-First CTA Buttons */}
@@ -46,14 +46,14 @@ export default function HomePage() {
                             </Link>
                             <Link href="/jobs" className="btn btn-outline-light btn-lg">
                                 <i className="me-2">📋</i>
-                                Browse Jobs
+                                Browse Bookings
                             </Link>
                         </div>
                     ) : (
                         <div className="d-grid gap-3 d-md-flex justify-content-md-center">
-                            <Link href="/jobs/create" className="btn btn-primary btn-lg">
+                            <Link href="/bookings/create" className="btn btn-primary btn-lg">
                                 <i className="me-2">➕</i>
-                                Post a Job
+                                Post a Booking
                             </Link>
                             <Link href="/dashboard" className="btn btn-outline-light btn-lg">
                                 <i className="me-2">📊</i>
