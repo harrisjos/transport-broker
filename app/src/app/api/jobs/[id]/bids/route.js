@@ -45,7 +45,8 @@ export async function POST(request, { params }) {
             )
         }
 
-        const jobId = params.id
+        const resolvedParams = await params
+        const jobId = resolvedParams.id
 
         // Verify the job exists and is available for bidding
         const jobResult = await query(
@@ -207,7 +208,8 @@ export async function GET(request, { params }) {
             )
         }
 
-        const jobId = params.id
+        const resolvedParams = await params
+        const jobId = resolvedParams.id
 
         // Verify the job exists
         const jobResult = await query(

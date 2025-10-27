@@ -37,8 +37,9 @@ export async function PATCH(request, { params }) {
             )
         }
 
-        const jobId = params.id
-        const bidId = params.bidId
+        const resolvedParams = await params
+        const jobId = resolvedParams.id
+        const bidId = resolvedParams.bidId
 
         // Verify the job exists and belongs to the user
         const jobResult = await query(

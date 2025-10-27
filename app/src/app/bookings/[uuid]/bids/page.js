@@ -5,13 +5,14 @@
  */
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import { useAuth } from '../../../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
 export default function BidReviewPage({ params }) {
     const { user, loading: authLoading } = useAuth()
     const router = useRouter()
+    const resolvedParams = use(params)
     const [job, setJob] = useState(null)
     const [bids, setBids] = useState([])
     const [loading, setLoading] = useState(true)
@@ -24,7 +25,7 @@ export default function BidReviewPage({ params }) {
             setLoading(true)
 
             // Fetch job details using UUID
-            const jobResponse = await fetch(`/api/bookings/uuid/${params.uuid}`)
+            const jobResponse = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}`)
             const jobData = await jobResponse.json()
 
             if (jobResponse.ok) {
@@ -35,7 +36,7 @@ export default function BidReviewPage({ params }) {
             }
 
             // Fetch bids for this job using UUID
-            const bidsResponse = await fetch(`/api/bookings/uuid/${params.uuid}/bids`)
+            const bidsResponse = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}/bids`)
             const bidsData = await bidsResponse.json()
 
             if (bidsResponse.ok) {
@@ -48,7 +49,7 @@ export default function BidReviewPage({ params }) {
         } finally {
             setLoading(false)
         }
-    }, [params.uuid])
+    }, [resolvedParams.uuid])
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -61,10 +62,10 @@ export default function BidReviewPage({ params }) {
             return
         }
 
-        if (user && params.uuid) {
+        if (user && resolvedParams.uuid) {
             fetchJobAndBids()
         }
-    }, [user, authLoading, router, params.uuid, fetchJobAndBids])
+    }, [user, authLoading, router, resolvedParams.uuid, fetchJobAndBids])
 
     const handleBidAction = async (bidId, action) => {
         try {
@@ -72,7 +73,7 @@ export default function BidReviewPage({ params }) {
             setError('')
             setSuccess('')
 
-            const response = await fetch(`/api/bookings/uuid/${params.uuid}/bids/${bidId}`, {
+            const response = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}/bids/${bidId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

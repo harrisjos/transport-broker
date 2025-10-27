@@ -5,13 +5,14 @@
  */
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import { useAuth } from '../../../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
 export default function EditBookingPage({ params }) {
     const { user, loading: authLoading } = useAuth()
     const router = useRouter()
+    const resolvedParams = use(params)
     const [booking, setBooking] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -21,7 +22,7 @@ export default function EditBookingPage({ params }) {
     const fetchBooking = useCallback(async () => {
         try {
             setLoading(true)
-            const response = await fetch(`/api/bookings/uuid/${params.uuid}`)
+            const response = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}`)
             const data = await response.json()
 
             if (response.ok) {
@@ -34,7 +35,7 @@ export default function EditBookingPage({ params }) {
         } finally {
             setLoading(false)
         }
-    }, [params.uuid])
+    }, [resolvedParams.uuid])
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -47,10 +48,10 @@ export default function EditBookingPage({ params }) {
             return
         }
 
-        if (user && params.uuid) {
+        if (user && resolvedParams.uuid) {
             fetchBooking()
         }
-    }, [user, authLoading, router, params.uuid, fetchBooking])
+    }, [user, authLoading, router, resolvedParams.uuid, fetchBooking])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -59,7 +60,7 @@ export default function EditBookingPage({ params }) {
         setSuccess('')
 
         try {
-            const response = await fetch(`/api/bookings/uuid/${params.uuid}`, {
+            const response = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -72,7 +73,7 @@ export default function EditBookingPage({ params }) {
             if (response.ok) {
                 setSuccess('Booking updated successfully!')
                 setTimeout(() => {
-                    router.push(`/bookings/${params.uuid}`)
+                    router.push(`/bookings/${resolvedParams.uuid}`)
                 }, 2000)
             } else {
                 setError(data.error || 'Failed to update booking')
@@ -140,7 +141,7 @@ export default function EditBookingPage({ params }) {
                                 <a href="/bookings" className="text-decoration-none">My Bookings</a>
                             </li>
                             <li className="breadcrumb-item">
-                                <a href={`/bookings/${params.uuid}`} className="text-decoration-none">Booking Details</a>
+                                <a href={`/bookings/${resolvedParams.uuid}`} className="text-decoration-none">Booking Details</a>
                             </li>
                             <li className="breadcrumb-item active" aria-current="page">
                                 Edit
@@ -463,7 +464,7 @@ export default function EditBookingPage({ params }) {
 
                             <div className="card-footer">
                                 <div className="d-flex justify-content-between">
-                                    <a href={`/bookings/${params.uuid}`} className="btn btn-secondary">
+                                    <a href={`/bookings/${resolvedParams.uuid}`} className="btn btn-secondary">
                                         <i className="fas fa-arrow-left me-2"></i>
                                         Cancel
                                     </a>

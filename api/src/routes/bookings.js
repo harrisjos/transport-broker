@@ -112,6 +112,7 @@ export default async function bookingRoutes(fastify) {
                 if (isCarrier && !isShipper) {
                     query = query.select([
                         'bookings.id',
+                        'bookings.uuid',
                         'bookings.origin_name as origin_company',
                         'bookings.origin_suburb',
                         'bookings.origin_postcode',
@@ -138,6 +139,7 @@ export default async function bookingRoutes(fastify) {
                     // Shippers see their own bookings with full details including budget
                     query = query.select([
                         'bookings.id',
+                        'bookings.uuid',
                         'bookings.origin_name as origin_company',
                         'bookings.origin_street_address as origin_address',
                         'bookings.origin_suburb',
@@ -477,11 +479,11 @@ export default async function bookingRoutes(fastify) {
                     status: 'draft'
                 }
 
-                const [booking] = /** @type {{ id: number; status: string; created_at: string }[]} */ (await fastify.db
+                const [booking] = /** @type {{ id: number; uuid: string; status: string; created_at: string }[]} */ (await fastify.db
                     .insertInto('bookings')
                     .values(bookingData)
                     .returning([
-                        'id', 'status', 'created_at'
+                        'id', 'uuid', 'status', 'created_at'
                     ])
                     .execute())
 

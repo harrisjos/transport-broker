@@ -15,7 +15,7 @@ export default async function goodsTypesRoutes(fastify) {
             const goodsTypes = await fastify.db
                 .selectFrom('goods_types')
                 .select(['id', 'name', 'description'])
-                .where('is_active', '=', true)
+                .where('is_active', '=', 1)
                 .orderBy('name', 'asc')
                 .execute()
 
@@ -35,7 +35,7 @@ export default async function goodsTypesRoutes(fastify) {
                 .selectFrom('goods_types')
                 .select(['id', 'name', 'description', 'created_at'])
                 .where('id', '=', id)
-                .where('is_active', '=', true)
+                .where('is_active', '=', 1)
                 .executeTakeFirst()
 
             if (!goodsType) {

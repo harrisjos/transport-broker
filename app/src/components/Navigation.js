@@ -1,12 +1,14 @@
 // @ts-nocheck
 /**
- * M8Freight Navigation Component - Dark Mode, Mobile-First
+ * M8Freight Navigation Component - Light Mode, Mobile-First
  */
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '../lib/auth-jwt'
 import BRANDING from '../config/branding'
+import { useEffect } from 'react'
 
 export default function Navigation() {
     const { user, logout, loading } = useAuth()
@@ -19,15 +21,42 @@ export default function Navigation() {
         }
     }
 
+    // Function to collapse navbar on mobile when link is clicked
+    const collapseNavbar = () => {
+        const navbarCollapse = document.getElementById('navbarNav')
+        if (navbarCollapse && navbarCollapse.classList.contains('show')) {
+            const bsCollapse = new window.bootstrap.Collapse(navbarCollapse, {
+                toggle: false
+            })
+            bsCollapse.hide()
+        }
+    }
+
+    // Add click handlers to nav links
+    useEffect(() => {
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link, .dropdown-item')
+        navLinks.forEach(link => {
+            link.addEventListener('click', collapseNavbar)
+        })
+
+        return () => {
+            navLinks.forEach(link => {
+                link.removeEventListener('click', collapseNavbar)
+            })
+        }
+    }, [user])
+
     return (
-        <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom fixed-top shadow-sm">
+        <nav className="navbar navbar-expand-lg navbar-light fixed-top shadow-sm border-bottom" style={{ backgroundColor: '#ffffff' }}>
             <div className="container-fluid">
                 <Link href="/" className="navbar-brand d-flex align-items-center">
-                    <img
+                    <Image
                         src={BRANDING.assets.logo}
                         alt={`${BRANDING.appName} Logo`}
-                        height={BRANDING.components.navbar.logoHeight}
+                        height={parseInt(BRANDING.components.navbar.logoHeight)}
+                        width={parseInt(BRANDING.components.navbar.logoHeight)}
                         className="me-2"
+                        style={{ height: BRANDING.components.navbar.logoHeight, width: 'auto' }}
                         onError={(e) => {
                             // Fallback if logo image is not found
                             e.target.style.display = 'none'

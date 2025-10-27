@@ -15,7 +15,9 @@ export async function GET(request, { params }) {
             )
         }
 
-        const { uuid } = params
+        // Await params in Next.js 16
+        const resolvedParams = await params
+        const { uuid } = resolvedParams
 
         // Validate UUID format (basic check)
         if (!uuid || typeof uuid !== 'string' || uuid.length < 10) {

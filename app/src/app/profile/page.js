@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
@@ -24,32 +24,25 @@ export default function ProfilePage() {
     const [success, setSuccess] = useState('')
     const [editMode, setEditMode] = useState(false)
 
-    useEffect(() => {
-        if (!authLoading && !user) {
-            router.push('/auth/login')
-            return
-        }
-
-        if (user) {
-            loadProfile()
-        }
-    }, [user, authLoading, router])
-
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         try {
             setLoading(true)
             const response = await makeAuthenticatedRequest('/api/auth/me')
             if (response.ok) {
                 const userData = await response.json()
+
+                // Get primary organization or first organization from array
+                const primaryOrg = userData.organizations?.find(org => org.is_primary) || userData.organizations?.[0]
+
                 setProfile({
                     name: userData.name || '',
                     email: userData.email || '',
                     phone: userData.phone || '',
                     organisation: {
-                        name: userData.organisation?.name || '',
-                        abn: userData.organisation?.abn || '',
-                        address: userData.organisation?.address || '',
-                        organisationType: userData.organisation?.organisationType || ''
+                        name: primaryOrg?.name || '',
+                        abn: primaryOrg?.abn || '',
+                        address: primaryOrg?.address || '',
+                        organisationType: userData.organisationType || primaryOrg?.type || ''
                     }
                 })
             } else {
@@ -61,7 +54,18 @@ export default function ProfilePage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [makeAuthenticatedRequest])
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/auth/login')
+            return
+        }
+
+        if (user) {
+            loadProfile()
+        }
+    }, [user, authLoading, router, loadProfile])
 
     const handleSave = async (e) => {
         e.preventDefault()
@@ -216,22 +220,16 @@ export default function ProfilePage() {
                                     </div>
                                     <div className="col-md-6">
                                         <label htmlFor="orgType" className="form-label">Organisation Type</label>
-                                        <select
-                                            className="form-select"
+                                        <input
+                                            type="text"
+                                            className="form-control"
                                             id="orgType"
                                             value={profile.organisation.organisationType}
-                                            onChange={(e) => setProfile(prev => ({
-                                                ...prev,
-                                                organisation: { ...prev.organisation, organisationType: e.target.value }
-                                            }))}
-                                            disabled={!editMode}
-                                            required
-                                        >
-                                            <option value="">Select Type</option>
-                                            <option value="shipper">Shipper</option>
-                                            <option value="carrier">Carrier</option>
-                                            <option value="both">Both</option>
-                                        </select>
+                                            disabled={true}
+                                            readOnly
+                                            style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
+                                        />
+                                        <small className="form-text text-muted">Organisation type cannot be changed.</small>
                                     </div>
                                 </div>
 

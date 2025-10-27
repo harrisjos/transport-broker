@@ -5,11 +5,34 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '../lib/auth-jwt'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import BRANDING from '../config/branding'
 
 export default function HomePage() {
-    const { user } = useAuth()
+    const { user, loading } = useAuth()
+    const router = useRouter()
+
+    // Redirect logged-in users to dashboard
+    useEffect(() => {
+        if (!loading && user) {
+            router.push('/dashboard')
+        }
+    }, [user, loading, router])
+
+    // Show loading while checking auth or redirecting
+    if (loading || user) {
+        return (
+            <div className="container my-5 text-center">
+                <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="mt-3">Loading...</p>
+            </div>
+        )
+    }
 
     return (
         <div className="container my-3">
@@ -17,11 +40,13 @@ export default function HomePage() {
             <div className="row mb-4 mb-md-5">
                 <div className="col-12 col-lg-8 mx-auto text-center">
                     <div className="mb-4">
-                        <img
+                        <Image
                             src={BRANDING.assets.logo}
                             alt={`${BRANDING.appName} Logo`}
                             className="img-fluid mb-3"
-                            style={{ maxHeight: '120px' }}
+                            width={120}
+                            height={120}
+                            style={{ maxHeight: '120px', width: 'auto' }}
                             onError={(e) => {
                                 e.target.style.display = 'none'
                             }}
@@ -44,7 +69,7 @@ export default function HomePage() {
                                 <i className="me-2">🚀</i>
                                 Get Started Free
                             </Link>
-                            <Link href="/jobs" className="btn btn-outline-light btn-lg">
+                            <Link href="/jobs" className="btn btn-outline-primary btn-lg">
                                 <i className="me-2">📋</i>
                                 Browse Bookings
                             </Link>
@@ -55,7 +80,7 @@ export default function HomePage() {
                                 <i className="me-2">➕</i>
                                 Post a Booking
                             </Link>
-                            <Link href="/dashboard" className="btn btn-outline-light btn-lg">
+                            <Link href="/dashboard" className="btn btn-outline-primary btn-lg">
                                 <i className="me-2">📊</i>
                                 Dashboard
                             </Link>
@@ -101,27 +126,7 @@ export default function HomePage() {
                 </div>
             </div>
 
-            {/* Stats Section - Mobile-First */}
-            <div className="row mb-4 mb-md-5">
-                <div className="col-12">
-                    <div className="card bg-dark-card p-3 p-md-4">
-                        <div className="row text-center g-3">
-                            <div className="col-12 col-sm-4 mb-3 mb-sm-0">
-                                <h3 className="fw-bold" style={{ color: BRANDING.colors.primary }}>500+</h3>
-                                <p className="mb-0 text-muted">Active Carriers</p>
-                            </div>
-                            <div className="col-12 col-sm-4 mb-3 mb-sm-0">
-                                <h3 className="fw-bold" style={{ color: BRANDING.colors.primary }}>1,200+</h3>
-                                <p className="mb-0 text-muted">Jobs Completed</p>
-                            </div>
-                            <div className="col-12 col-sm-4">
-                                <h3 className="fw-bold" style={{ color: BRANDING.colors.primary }}>98%</h3>
-                                <p className="mb-0 text-muted">Customer Satisfaction</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
 
             {/* CTA Section - Mobile-First */}
             <div className="row">
@@ -138,7 +143,7 @@ export default function HomePage() {
                                         <i className="me-2">📝</i>
                                         Sign Up Now
                                     </Link>
-                                    <Link href="/auth/login" className="btn btn-outline-light btn-lg">
+                                    <Link href="/auth/login" className="btn btn-outline-primary btn-lg">
                                         <i className="me-2">🔑</i>
                                         Login
                                     </Link>

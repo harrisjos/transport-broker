@@ -101,7 +101,7 @@ export default async function authRoutes(fastify) {
                         state: orgDetails.state,
                         phone: orgDetails.phone || phone,
                         email: orgDetails.email || email,
-                        is_active: true
+                        is_active: 1
                     })
                     .returning(['id', 'name', 'organization_type'])
                     .execute()
@@ -116,7 +116,7 @@ export default async function authRoutes(fastify) {
                         password_hash: passwordHash,
                         password_salt: passwordSalt,
                         role: 'customer', // Default role, will be overridden by organization role
-                        is_email_verified: false,
+                        is_email_verified: 0,
                         profile_data: {}
                     })
                     .returning(['id', 'email', 'name', 'phone', 'created_at'])
@@ -129,7 +129,7 @@ export default async function authRoutes(fastify) {
                         user_id: user.id,
                         organization_id: organization.id,
                         role: 'admin',
-                        is_primary: true
+                        is_primary: 1
                     })
                     .execute()
 
@@ -380,7 +380,7 @@ export default async function authRoutes(fastify) {
                     .innerJoin('organizations', 'user_organizations.organization_id', 'organizations.id')
                     .select(['organizations.id', 'organizations.name'])
                     .where('user_organizations.user_id', '=', userId)
-                    .where('user_organizations.is_primary', '=', true)
+                    .where('user_organizations.is_primary', '=', 1)
                     .executeTakeFirst()
 
                 if (userOrg) {

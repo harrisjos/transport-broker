@@ -297,12 +297,6 @@ export default function DashboardPage() {
                                         </div>
                                     </>
                                 )}
-                                <div className="col-md-3 mb-2">
-                                    <a href="/profile" className="btn btn-outline-secondary w-100">
-                                        <i className="fas fa-user me-2"></i>
-                                        Profile
-                                    </a>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -334,33 +328,82 @@ export default function DashboardPage() {
                         </div>
                         <div className="card-body">
                             {stats.recentActivity && stats.recentActivity.length > 0 ? (
-                                <div className="table-responsive">
-                                    <table className="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Job ID</th>
-                                                <th>Route</th>
-                                                <th>Status</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {stats.recentActivity.map((job) => (
-                                                <tr key={job.id}>
-                                                    <td>
-                                                        <span className="fw-bold">#{job.id}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div className="d-flex align-items-center">
-                                                            <i className="fas fa-circle text-success me-1" style={{ fontSize: '6px' }}></i>
-                                                            <small className="me-2">{job.origin_suburb}, {job.origin_state}</small>
-                                                            <i className="fas fa-arrow-right text-muted me-2"></i>
-                                                            <i className="fas fa-circle text-danger me-1" style={{ fontSize: '6px' }}></i>
-                                                            <small>{job.destination_suburb}, {job.destination_state}</small>
-                                                        </div>
-                                                    </td>
-                                                    <td>
+                                <>
+                                    {/* Desktop Table View */}
+                                    <div className="d-none d-md-block">
+                                        <div className="table-responsive">
+                                            <table className="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Job ID</th>
+                                                        <th>Route</th>
+                                                        <th>Status</th>
+                                                        <th>Date</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {stats.recentActivity.map((job) => (
+                                                        <tr key={job.id}>
+                                                            <td>
+                                                                <span className="fw-bold">#{job.id}</span>
+                                                            </td>
+                                                            <td>
+                                                                <div className="d-flex align-items-center">
+                                                                    <i className="fas fa-circle text-success me-1" style={{ fontSize: '6px' }}></i>
+                                                                    <small className="me-2">{job.origin_suburb}, {job.origin_state}</small>
+                                                                    <i className="fas fa-arrow-right text-muted me-2"></i>
+                                                                    <i className="fas fa-circle text-danger me-1" style={{ fontSize: '6px' }}></i>
+                                                                    <small>{job.destination_suburb}, {job.destination_state}</small>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <span className={`badge ${job.status === 'active' ? 'bg-success' :
+                                                                    job.status === 'in_bidding' ? 'bg-warning' :
+                                                                        job.status === 'assigned' ? 'bg-info' :
+                                                                            job.status === 'in_transit' ? 'bg-primary' :
+                                                                                job.status === 'completed' ? 'bg-secondary' :
+                                                                                    'bg-light text-dark'
+                                                                    }`}>
+                                                                    {job.status?.replace('_', ' ').toUpperCase()}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <small>{new Date(job.pickup_date || job.created_at).toLocaleDateString('en-AU')}</small>
+                                                            </td>
+                                                            <td>
+                                                                {isShipper && (
+                                                                    <div className="btn-group" role="group">
+                                                                        <a href={`/bookings/${job.uuid}`} className="btn btn-outline-primary btn-sm">
+                                                                            <i className="fas fa-eye"></i>
+                                                                        </a>
+                                                                        {(job.status === 'in_bidding' || job.status === 'assigned') && (
+                                                                            <a href={`/bookings/${job.uuid}/bids`} className="btn btn-outline-warning btn-sm">
+                                                                                <i className="fas fa-gavel"></i>
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {isCarrier && !isShipper && (
+                                                                    <a href={`/jobs/${job.id}`} className="btn btn-outline-success btn-sm">
+                                                                        <i className="fas fa-truck"></i>
+                                                                    </a>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile Card View */}
+                                    <div className="d-md-none">
+                                        {stats.recentActivity.map((job) => (
+                                            <div key={job.id} className="card mb-3">
+                                                <div className="card-body">
+                                                    <div className="d-flex justify-content-between align-items-start mb-2">
+                                                        <span className="fw-bold">Job #{job.id}</span>
                                                         <span className={`badge ${job.status === 'active' ? 'bg-success' :
                                                             job.status === 'in_bidding' ? 'bg-warning' :
                                                                 job.status === 'assigned' ? 'bg-info' :
@@ -370,34 +413,47 @@ export default function DashboardPage() {
                                                             }`}>
                                                             {job.status?.replace('_', ' ').toUpperCase()}
                                                         </span>
-                                                    </td>
-                                                    <td>
-                                                        <small>{new Date(job.pickup_date || job.created_at).toLocaleDateString('en-AU')}</small>
-                                                    </td>
-                                                    <td>
-                                                        {isShipper && (
-                                                            <div className="btn-group" role="group">
-                                                                <a href={`/bookings/${job.uuid}`} className="btn btn-outline-primary btn-sm">
-                                                                    <i className="fas fa-eye"></i>
-                                                                </a>
-                                                                {(job.status === 'in_bidding' || job.status === 'assigned') && (
-                                                                    <a href={`/bookings/${job.uuid}/bids`} className="btn btn-outline-warning btn-sm">
-                                                                        <i className="fas fa-gavel"></i>
+                                                    </div>
+                                                    <div className="mb-2">
+                                                        <div className="d-flex align-items-center">
+                                                            <i className="fas fa-circle text-success me-1" style={{ fontSize: '6px' }}></i>
+                                                            <small className="me-2">{job.origin_suburb}, {job.origin_state}</small>
+                                                        </div>
+                                                        <div className="text-center my-1">
+                                                            <i className="fas fa-arrow-down text-muted"></i>
+                                                        </div>
+                                                        <div className="d-flex align-items-center">
+                                                            <i className="fas fa-circle text-danger me-1" style={{ fontSize: '6px' }}></i>
+                                                            <small>{job.destination_suburb}, {job.destination_state}</small>
+                                                        </div>
+                                                    </div>
+                                                    <div className="d-flex justify-content-between align-items-center">
+                                                        <small className="text-muted">{new Date(job.pickup_date || job.created_at).toLocaleDateString('en-AU')}</small>
+                                                        <div>
+                                                            {isShipper && (
+                                                                <div className="btn-group" role="group">
+                                                                    <a href={`/bookings/${job.uuid}`} className="btn btn-outline-primary btn-sm">
+                                                                        <i className="fas fa-eye"></i>
                                                                     </a>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                        {isCarrier && !isShipper && (
-                                                            <a href={`/jobs/${job.id}`} className="btn btn-outline-success btn-sm">
-                                                                <i className="fas fa-truck"></i>
-                                                            </a>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                                    {(job.status === 'in_bidding' || job.status === 'assigned') && (
+                                                                        <a href={`/bookings/${job.uuid}/bids`} className="btn btn-outline-warning btn-sm">
+                                                                            <i className="fas fa-gavel"></i>
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {isCarrier && !isShipper && (
+                                                                <a href={`/jobs/${job.id}`} className="btn btn-outline-success btn-sm">
+                                                                    <i className="fas fa-truck"></i>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
                             ) : (
                                 <div className="text-center py-4">
                                     <i className="fas fa-inbox fa-3x text-muted mb-3"></i>

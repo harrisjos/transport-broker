@@ -31,13 +31,34 @@ async function runMigrations() {
             .execute()
 
         // Get list of migration files
-        const migrationsDir = join(process.cwd(), '..', 'sql', 'migrations')
-        const files = await readdir(migrationsDir)
+        // Try multiple possible paths for migrations
+        const possiblePaths = [
+            join(process.cwd(), '..', 'sql', 'migrations'),      // Production build
+            join(process.cwd(), '..', '..', 'sql', 'migrations') // Development with volumes
+        ]
+
+        let migrationsDir = null
+        let files = []
+
+        for (const path of possiblePaths) {
+            try {
+                files = await readdir(path)
+                migrationsDir = path
+                break
+            } catch (err) {
+                continue
+            }
+        }
+
+        if (!migrationsDir) {
+            throw new Error('Could not find migrations directory in any of the expected locations')
+        }
+
         const sqlFiles = files
             .filter(file => file.endsWith('_sqlite.sql'))
             .sort()
 
-        console.log(`Found ${sqlFiles.length} migration files`)
+        console.log(`Found ${sqlFiles.length} migration files in ${migrationsDir}`)
 
         // Check which migrations have already been run
         const executedMigrations = await db

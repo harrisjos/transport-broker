@@ -77,7 +77,7 @@ export default function CreateBooking() {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
-        if (!loading && (!user || user.organization_type !== 'shipper')) {
+        if (!loading && (!user || (user.organisationType !== 'shipper' && user.organisationType !== 'both'))) {
             router.push('/auth/login')
         }
     }, [user, loading, router])
@@ -202,7 +202,9 @@ export default function CreateBooking() {
 
             if (response.ok) {
                 const booking = await response.json()
-                router.push(`/bookings/${booking.id}`)
+                // prefer uuid when available (new secure routing), fall back to numeric id
+                const bookingIdOrUuid = booking.uuid || booking.id || (booking.booking && (booking.booking.uuid || booking.booking.id))
+                router.push(`/bookings/${bookingIdOrUuid}`)
             } else {
                 const error = await response.json()
                 setErrors({ submit: error.message || 'Failed to create booking' })
