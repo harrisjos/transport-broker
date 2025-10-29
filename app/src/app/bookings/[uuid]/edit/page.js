@@ -10,7 +10,7 @@ import { useAuth } from '../../../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
 export default function EditBookingPage({ params }) {
-    const { user, loading: authLoading } = useAuth()
+    const { user, loading: authLoading, makeAuthenticatedRequest } = useAuth()
     const router = useRouter()
     const resolvedParams = use(params)
     const [booking, setBooking] = useState(null)
@@ -22,7 +22,7 @@ export default function EditBookingPage({ params }) {
     const fetchBooking = useCallback(async () => {
         try {
             setLoading(true)
-            const response = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}`)
+            const response = await makeAuthenticatedRequest(`/api/bookings/uuid/${resolvedParams.uuid}`)
             const data = await response.json()
 
             if (response.ok) {
@@ -35,7 +35,7 @@ export default function EditBookingPage({ params }) {
         } finally {
             setLoading(false)
         }
-    }, [resolvedParams.uuid])
+    }, [resolvedParams.uuid, makeAuthenticatedRequest])
 
     useEffect(() => {
         if (!authLoading && !user) {

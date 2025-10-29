@@ -1,4 +1,5 @@
 <!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD034 -->
 # Update 1.20
 
 ## Profile Page

@@ -18,18 +18,12 @@ export default function DashboardPage() {
         try {
             setLoading(true)
 
-            // Debug: Log user object to see what we have
-            console.log('Dashboard fetchDashboardData called with user:', user)
-            console.log('User organizationType:', user?.organizationType)
-
             // For shippers: Fetch their created jobs
             if (user.organizationType === 'shipper' || user.organizationType === 'both') {
-                console.log('Fetching bookings for shipper...')
                 const bookingsResponse = await makeAuthenticatedRequest('/api/bookings?my_jobs=true&limit=5')
                 if (bookingsResponse.ok) {
                     const bookingsData = await bookingsResponse.json()
                     const bookings = bookingsData.bookings || []
-                    console.log('Received bookings:', bookings.length)
                     setStats(prev => ({
                         ...prev,
                         bookings: {
@@ -42,8 +36,6 @@ export default function DashboardPage() {
                 } else {
                     console.error('Bookings request failed:', bookingsResponse.status)
                 }
-            } else {
-                console.log('User is not a shipper, organizationType:', user?.organizationType)
             }
 
             // For carriers: Fetch their accepted jobs
@@ -72,7 +64,7 @@ export default function DashboardPage() {
                         }))
                     }
                 } catch (bidError) {
-                    console.log('Bids API not available yet, showing empty data')
+                    // Bids API not available yet, showing empty data
                     setStats(prev => ({
                         ...prev,
                         bids: { total: 0, pending: 0, accepted: 0 },
@@ -97,10 +89,7 @@ export default function DashboardPage() {
         if (user) {
             // If user object doesn't have organizationType, refresh user data
             if (!user.organizationType) {
-                console.log('User missing organizationType, refreshing user data...')
-                getCurrentUser().then(() => {
-                    console.log('User data refreshed')
-                })
+                getCurrentUser()
             } else {
                 fetchDashboardData()
             }
@@ -158,7 +147,11 @@ export default function DashboardPage() {
                 {isShipper && (
                     <>
                         <div className="col-md-4">
-                            <div className="card bg-primary text-white">
+                            <div
+                                className="card bg-primary text-white"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => router.push('/my-jobs')}
+                            >
                                 <div className="card-body">
                                     <div className="d-flex justify-content-between">
                                         <div>
@@ -173,7 +166,11 @@ export default function DashboardPage() {
                             </div>
                         </div>
                         <div className="col-md-4">
-                            <div className="card bg-success text-white">
+                            <div
+                                className="card bg-success text-white"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => router.push('/my-jobs?status=active')}
+                            >
                                 <div className="card-body">
                                     <div className="d-flex justify-content-between">
                                         <div>
@@ -188,7 +185,11 @@ export default function DashboardPage() {
                             </div>
                         </div>
                         <div className="col-md-4">
-                            <div className="card bg-info text-white">
+                            <div
+                                className="card bg-info text-white"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => router.push('/my-jobs?status=completed')}
+                            >
                                 <div className="card-body">
                                     <div className="d-flex justify-content-between">
                                         <div>

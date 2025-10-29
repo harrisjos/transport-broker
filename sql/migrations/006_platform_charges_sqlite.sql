@@ -1,4 +1,4 @@
--- Migration: Add platform charge fields to bids table
+-- Migration: Add platform charge fields to bids table (SQLite version)
 -- This migration adds platform charge tracking to the bids table
 
 -- Add platform charge columns to bids table

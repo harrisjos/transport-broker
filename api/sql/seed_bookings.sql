@@ -1,7 +1,8 @@
 -- Enhanced seed bookings for testing
 -- Assumes users with IDs 1 and 2 exist (john.customer@example.com and sarah.buyer@example.com)
--- Assumes organizations with IDs 1 and 2 exist corresponding to these users
--- Assumes carrier organizations with IDs 3, 4, 5 exist for bids
+-- John Customer: user_id=1, org_id=6 (Manufacturing Solutions Pty Ltd)
+-- Sarah Buyer: user_id=2, org_id=7 (XYZ Corp)
+-- Assumes carrier organizations exist for bids
 
 -- Clear existing bookings and bids for clean seed
 DELETE FROM bids;
@@ -12,7 +13,7 @@ DELETE FROM sqlite_sequence WHERE name IN ('bookings', 'bids');
 
 -- ===== OPEN BOOKINGS =====
 
--- Open booking 1 for john.customer@example.com (user_id: 1, org_id: 1)
+-- Open booking 1 for john.customer@example.com (user_id: 1, org_id: 6)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -23,7 +24,7 @@ INSERT INTO bookings (
   special_requirements, requires_tailgate, status, published_at
 ) VALUES 
 (
-  1, 1,
+  1, 6,
   'ABC Logistics Warehouse', '123 Industrial Rd', 'Smithfield', '2164', 'NSW',
   'Brisbane Distribution Centre', '456 Logistics Way', 'Acacia Ridge', '4110', 'QLD',
   '[{"length": 1.2, "width": 1.0, "height": 1.5, "weight": 500, "description": "Office equipment"}]',
@@ -35,7 +36,7 @@ INSERT INTO bookings (
   1, 'open', CURRENT_TIMESTAMP
 );
 
--- Open booking 2 for john.customer@example.com (user_id: 1, org_id: 1)
+-- Open booking 2 for john.customer@example.com (user_id: 1, org_id: 6)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -46,7 +47,7 @@ INSERT INTO bookings (
   special_requirements, requires_crane, status, published_at
 ) VALUES 
 (
-  1, 1,
+  1, 6,
   'ABC Logistics Warehouse', '123 Industrial Rd', 'Smithfield', '2164', 'NSW',
   'Adelaide Manufacturing', '789 Production St', 'Wingfield', '5013', 'SA',
   '[{"length": 2.4, "width": 1.2, "height": 1.8, "weight": 850, "description": "Manufacturing equipment"}, {"length": 1.5, "width": 1.0, "height": 1.2, "weight": 320, "description": "Spare parts"}]',
@@ -58,7 +59,7 @@ INSERT INTO bookings (
   1, 'open', CURRENT_TIMESTAMP
 );
 
--- Open booking 3 for sarah.buyer@example.com (user_id: 2, org_id: 2)
+-- Open booking 3 for sarah.buyer@example.com (user_id: 2, org_id: 7)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -69,7 +70,7 @@ INSERT INTO bookings (
   special_requirements, requires_forklift, status, published_at
 ) VALUES 
 (
-  2, 2,
+  2, 7,
   'XYZ Corp Distribution', '456 Supply Chain Ave', 'Altona North', '3025', 'VIC',
   'Perth Retail Store', '321 Shopping Centre Dr', 'Joondalup', '6027', 'WA',
   '[{"length": 1.2, "width": 0.8, "height": 1.0, "weight": 25, "description": "Electronics - Laptops"}, {"length": 1.2, "width": 0.8, "height": 1.0, "weight": 30, "description": "Electronics - Tablets"}, {"length": 1.0, "width": 0.6, "height": 0.8, "weight": 15, "description": "Accessories"}]',
@@ -81,7 +82,7 @@ INSERT INTO bookings (
   1, 'open', CURRENT_TIMESTAMP
 );
 
--- Open booking 4 for sarah.buyer@example.com (user_id: 2, org_id: 2)
+-- Open booking 4 for sarah.buyer@example.com (user_id: 2, org_id: 7)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -92,7 +93,7 @@ INSERT INTO bookings (
   special_requirements, requires_forklift, status, published_at
 ) VALUES 
 (
-  2, 2,
+  2, 7,
   'XYZ Corp Furniture Warehouse', '789 Storage St', 'Dandenong South', '3175', 'VIC',
   'Gold Coast Office Fit-out', '159 Corporate Blvd', 'Robina', '4226', 'QLD',
   '[{"length": 2.0, "width": 1.0, "height": 0.8, "weight": 80, "description": "Office desks"}, {"length": 1.8, "width": 0.6, "height": 1.2, "weight": 45, "description": "Office chairs"}, {"length": 1.5, "width": 0.8, "height": 1.8, "weight": 120, "description": "Filing cabinets"}]',
@@ -106,7 +107,7 @@ INSERT INTO bookings (
 
 -- ===== ACCEPTED BOOKINGS WITH BIDS =====
 
--- Accepted booking 1 for john.customer@example.com (user_id: 1, org_id: 1)
+-- Accepted booking 1 for john.customer@example.com (user_id: 1, org_id: 6)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -117,7 +118,7 @@ INSERT INTO bookings (
   special_requirements, requires_tailgate, status, published_at
 ) VALUES 
 (
-  1, 1,
+  1, 6,
   'ABC Logistics Sydney Hub', '88 Parramatta Rd', 'Camperdown', '2050', 'NSW',
   'Melbourne Central Depot', '200 Collins St', 'Melbourne', '3000', 'VIC',
   '[{"length": 1.5, "width": 1.2, "height": 1.8, "weight": 750, "description": "Medical equipment"}, {"length": 1.0, "width": 0.8, "height": 1.0, "weight": 150, "description": "Supplies"}]',
@@ -129,7 +130,7 @@ INSERT INTO bookings (
   1, 'awarded', CURRENT_TIMESTAMP
 );
 
--- Accepted booking 2 for john.customer@example.com (user_id: 1, org_id: 1)  
+-- Accepted booking 2 for john.customer@example.com (user_id: 1, org_id: 6)  
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -140,7 +141,7 @@ INSERT INTO bookings (
   special_requirements, requires_forklift, status, published_at
 ) VALUES 
 (
-  1, 1,
+  1, 6,
   'ABC Processing Plant', '45 Factory Ave', 'Blacktown', '2148', 'NSW',
   'Darwin Distribution', '12 Stuart Hwy', 'Berrimah', '0828', 'NT',
   '[{"length": 1.8, "width": 1.4, "height": 2.0, "weight": 1200, "description": "Industrial parts"}, {"length": 1.2, "width": 1.0, "height": 1.5, "weight": 400, "description": "Components"}]',
@@ -152,7 +153,7 @@ INSERT INTO bookings (
   1, 'awarded', CURRENT_TIMESTAMP
 );
 
--- Accepted booking 3 for sarah.buyer@example.com (user_id: 2, org_id: 2)
+-- Accepted booking 3 for sarah.buyer@example.com (user_id: 2, org_id: 7)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -163,7 +164,7 @@ INSERT INTO bookings (
   special_requirements, requires_tailgate, status, published_at
 ) VALUES 
 (
-  2, 2,
+  2, 7,
   'XYZ Manufacturing', '156 Industrial Blvd', 'Sunshine', '3020', 'VIC',
   'Adelaide Showroom', '88 King William St', 'Adelaide', '5000', 'SA',
   '[{"length": 1.0, "width": 0.8, "height": 0.6, "weight": 35, "description": "Display models"}, {"length": 1.2, "width": 1.0, "height": 0.8, "weight": 45, "description": "Product samples"}]',
@@ -175,7 +176,7 @@ INSERT INTO bookings (
   1, 'awarded', CURRENT_TIMESTAMP
 );
 
--- Accepted booking 4 for sarah.buyer@example.com (user_id: 2, org_id: 2)
+-- Accepted booking 4 for sarah.buyer@example.com (user_id: 2, org_id: 7)
 INSERT INTO bookings (
   shipper_user_id, shipper_org_id,
   origin_name, origin_street_address, origin_suburb, origin_postcode, origin_state,
@@ -186,7 +187,7 @@ INSERT INTO bookings (
   special_requirements, requires_crane, status, published_at
 ) VALUES 
 (
-  2, 2,
+  2, 7,
   'XYZ Heavy Industries', '99 Steel Works Rd', 'Port Kembla', '2505', 'NSW',
   'Brisbane Construction', '77 Gateway Dr', 'Eagle Farm', '4009', 'QLD',
   '[{"length": 3.0, "width": 1.5, "height": 2.5, "weight": 2500, "description": "Steel beams"}, {"length": 2.5, "width": 1.2, "height": 1.8, "weight": 1800, "description": "Support structures"}]',

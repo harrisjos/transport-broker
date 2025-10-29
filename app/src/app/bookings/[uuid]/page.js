@@ -127,10 +127,12 @@ export default function BookingDetailsPage({ params }) {
                             <span className={`badge ${getStatusBadgeClass(booking.status)}`}>
                                 {booking.status?.replace('_', ' ').toUpperCase()}
                             </span>
-                            <a href={`/bookings/${resolvedParams.uuid}/edit`} className="btn btn-primary">
-                                <i className="fas fa-edit me-1"></i>
-                                Edit Booking
-                            </a>
+                            {booking.status === 'open' && (
+                                <a href={`/bookings/${resolvedParams.uuid}/edit`} className="btn btn-primary">
+                                    <i className="fas fa-edit me-1"></i>
+                                    Edit Booking
+                                </a>
+                            )}
                             <a href={`/bookings/${resolvedParams.uuid}/bids`} className="btn btn-warning">
                                 <i className="fas fa-eye me-1"></i>
                                 View Bids
@@ -174,13 +176,20 @@ export default function BookingDetailsPage({ params }) {
                                 </div>
                             </div>
 
-                            {/* 2. Budget */}
+                            {/* 2. Budget / Charge */}
                             <div className="card mb-4">
                                 <div className="card-header">
-                                    <h5>Budget</h5>
+                                    <h5>{booking.selected_bid_id && booking.status === 'awarded' ? 'Agreed Charge' : 'Budget'}</h5>
                                 </div>
                                 <div className="card-body">
-                                    {booking.budget_minimum && booking.budget_maximum ? (
+                                    {booking.selected_bid_id && booking.status === 'awarded' && booking.accepted_bid_amount ? (
+                                        <div className="text-center">
+                                            <h4 className="text-success mb-0">
+                                                ${booking.accepted_bid_amount}
+                                            </h4>
+                                            <small className="text-muted">Accepted Bid Amount</small>
+                                        </div>
+                                    ) : booking.budget_minimum && booking.budget_maximum ? (
                                         <div className="text-center">
                                             <h4 className="text-success mb-0">
                                                 ${booking.budget_minimum} - ${booking.budget_maximum}
@@ -196,9 +205,7 @@ export default function BookingDetailsPage({ params }) {
                                         <p className="text-muted text-center">Budget not specified</p>
                                     )}
                                 </div>
-                            </div>
-
-                            {/* 3. Schedule */}
+                            </div>                            {/* 3. Schedule */}
                             <div className="card mb-4">
                                 <div className="card-header">
                                     <h5>Schedule</h5>

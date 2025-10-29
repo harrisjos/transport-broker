@@ -33,8 +33,11 @@ async function runMigrations() {
         // Get list of migration files
         // Try multiple possible paths for migrations
         const possiblePaths = [
+            join(process.cwd(), 'sql', 'migrations'),            // Container path
             join(process.cwd(), '..', 'sql', 'migrations'),      // Production build
-            join(process.cwd(), '..', '..', 'sql', 'migrations') // Development with volumes
+            join(process.cwd(), '..', '..', 'sql', 'migrations'), // Development with volumes
+            join('/app', '..', 'sql', 'migrations'),             // Container mount point
+            join('/sql', 'migrations')                           // Direct path in container
         ]
 
         let migrationsDir = null
@@ -78,10 +81,19 @@ async function runMigrations() {
             console.log(`Running migration: ${filename}`)
 
             const filePath = join(migrationsDir, filename)
-            const sql = await readFile(filePath, 'utf-8')
+            const sqlContent = await readFile(filePath, 'utf-8')
 
-            // Execute the migration (raw SQL)
-            await db.executeQuery(db.raw(sql).compile(db))
+            // Split SQL file by semicolons and execute each statement
+            const statements = sqlContent
+                .split(';')
+                .map(s => s.trim())
+                .filter(s => s.length > 0 && !s.startsWith('--'))
+
+            for (const statement of statements) {
+                if (statement.trim()) {
+                    await sql`${sql.raw(statement)}`.execute(db)
+                }
+            }
 
             // Record the migration as executed
             await db

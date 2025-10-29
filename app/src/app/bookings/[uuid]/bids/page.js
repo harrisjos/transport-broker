@@ -10,7 +10,7 @@ import { useAuth } from '../../../../lib/auth-jwt'
 import { useRouter } from 'next/navigation'
 
 export default function BidReviewPage({ params }) {
-    const { user, loading: authLoading } = useAuth()
+    const { user, loading: authLoading, makeAuthenticatedRequest } = useAuth()
     const router = useRouter()
     const resolvedParams = use(params)
     const [job, setJob] = useState(null)
@@ -25,7 +25,7 @@ export default function BidReviewPage({ params }) {
             setLoading(true)
 
             // Fetch job details using UUID
-            const jobResponse = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}`)
+            const jobResponse = await makeAuthenticatedRequest(`/api/bookings/uuid/${resolvedParams.uuid}`)
             const jobData = await jobResponse.json()
 
             if (jobResponse.ok) {
@@ -36,7 +36,7 @@ export default function BidReviewPage({ params }) {
             }
 
             // Fetch bids for this job using UUID
-            const bidsResponse = await fetch(`/api/bookings/uuid/${resolvedParams.uuid}/bids`)
+            const bidsResponse = await makeAuthenticatedRequest(`/api/bookings/uuid/${resolvedParams.uuid}/bids`)
             const bidsData = await bidsResponse.json()
 
             if (bidsResponse.ok) {
@@ -49,7 +49,7 @@ export default function BidReviewPage({ params }) {
         } finally {
             setLoading(false)
         }
-    }, [resolvedParams.uuid])
+    }, [resolvedParams.uuid, makeAuthenticatedRequest])
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -245,7 +245,11 @@ export default function BidReviewPage({ params }) {
                                     <p><strong>Pallets:</strong> {job.pallets}</p>
                                     <p><strong>Goods Type:</strong> {job.goods_type_name || 'Not specified'}</p>
                                     <p><strong>Collection Date:</strong> {formatDate(job.collection_date_requested)}</p>
-                                    <p><strong>Budget Range:</strong> {formatCurrency(job.budget_minimum)} - {formatCurrency(job.budget_maximum)}</p>
+                                    {job.selected_bid_id && job.status === 'awarded' && job.accepted_bid_amount ? (
+                                        <p><strong>Agreed Charge:</strong> {formatCurrency(job.accepted_bid_amount)}</p>
+                                    ) : (
+                                        <p><strong>Budget Range:</strong> {formatCurrency(job.budget_minimum)} - {formatCurrency(job.budget_maximum)}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

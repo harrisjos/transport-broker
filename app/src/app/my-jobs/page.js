@@ -324,8 +324,8 @@ export default function MyJobsPage() {
                                             Posted: {formatDate(job.created_at)}
                                         </small>
                                         <div className="d-flex gap-2 flex-wrap">
-                                            {/* Edit button - only show for jobs not yet accepted */}
-                                            {(job.status === 'active' || job.status === 'in_bidding') && (
+                                            {/* Edit button - only show for open status jobs */}
+                                            {job.status === 'open' && (
                                                 <Link href={`/jobs/edit/${job.id}`} className="btn btn-outline-primary btn-sm">
                                                     <i className="fas fa-edit me-1"></i>
                                                     Edit

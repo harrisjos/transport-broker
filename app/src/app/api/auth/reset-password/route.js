@@ -14,8 +14,6 @@ export async function POST(request) {
         // Forward to API server
         const apiUrl = process.env.INTERNAL_API_URL || 'http://localhost:3001'
 
-        console.log('Reset password proxy to:', apiUrl)
-
         const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
             method: 'POST',
             headers: {

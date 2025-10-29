@@ -562,8 +562,8 @@ export default async function bookingRoutes(fastify) {
                     return reply.status(404).send({ error: 'Booking not found' })
                 }
 
-                if (existingBooking.status !== 'draft') {
-                    return reply.status(400).send({ error: 'Cannot modify booking after it has been published' })
+                if (existingBooking.status !== 'open') {
+                    return reply.status(400).send({ error: 'Cannot modify booking after bidding has started' })
                 }
 
                 /** @type {BookingUpdateBody & Record<string, any>} */
@@ -638,7 +638,72 @@ export default async function bookingRoutes(fastify) {
             }
         })
 
-    // Get booking by UUID (secure access without exposing internal IDs)
+    // Update booking by UUID - authenticated route
+    fastify.put('/bookings/uuid/:uuid', {
+        preHandler: fastify.authenticate
+    }, async (request, reply) => {
+        try {
+            const { uuid } = request.params
+            const { shipper_id } = request.user
+
+            // Check if booking exists and belongs to the authenticated shipper
+            const existingBooking = await request.db.get(
+                'SELECT id, shipper_id, status FROM bookings WHERE uuid = ? AND shipper_id = ?',
+                [uuid, shipper_id]
+            )
+
+            if (!existingBooking) {
+                return reply.status(404).send({ error: 'Booking not found' })
+            }
+
+            // Check if booking can be modified (only open status allowed)
+            if (existingBooking.status !== 'open') {
+                return reply.status(400).send({ error: 'Cannot modify booking after bidding has started' })
+            }
+
+            const updateFields = []
+            const updateValues = []
+
+            // Only update provided fields
+            const allowedFields = ['pickup_location', 'dropoff_location', 'pickup_date', 'dropoff_date', 'description', 'budget_min', 'budget_max']
+
+            allowedFields.forEach(field => {
+                if (request.body[field] !== undefined) {
+                    updateFields.push(`${field} = ?`)
+                    updateValues.push(request.body[field])
+                }
+            })
+
+            if (updateFields.length === 0) {
+                return reply.status(400).send({ error: 'No valid fields provided for update' })
+            }
+
+            // Add WHERE clause values
+            updateValues.push(uuid, shipper_id)
+
+            const query = `UPDATE bookings SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE uuid = ? AND shipper_id = ?`
+            await request.db.run(query, updateValues)
+
+            // Return the updated booking
+            const updatedBooking = await request.db.get(
+                `SELECT bookings.*, 
+                        status_codes.name as status_name,
+                        accepted_bid.amount as accepted_bid_amount
+                 FROM bookings 
+                 LEFT JOIN status_codes ON bookings.status = status_codes.code
+                 LEFT JOIN bids as accepted_bid ON bookings.selected_bid_id = accepted_bid.id
+                 WHERE bookings.uuid = ? AND bookings.shipper_id = ?`,
+                [uuid, shipper_id]
+            )
+
+            reply.send(updatedBooking)
+        } catch (error) {
+            console.error('Error updating booking:', error)
+            reply.status(500).send({ error: 'Internal server error' })
+        }
+    })
+
+    // Get booking by UUID - authenticated route
     fastify.get('/bookings/uuid/:uuid', {
         preHandler: [fastify.authenticate]
     },
@@ -675,6 +740,9 @@ export default async function bookingRoutes(fastify) {
                     .leftJoin('goods_types', 'bookings.goods_type_id', 'goods_types.id')
                     .leftJoin('users', 'bookings.shipper_user_id', 'users.id')
                     .leftJoin('organizations', 'bookings.shipper_org_id', 'organizations.id')
+                    .leftJoin('bids as accepted_bid', (join) =>
+                        join.onRef('bookings.selected_bid_id', '=', 'accepted_bid.id')
+                    )
                     .where('bookings.uuid', '=', uuid)
 
                 if (isCarrier && !isShipper) {
@@ -713,7 +781,8 @@ export default async function bookingRoutes(fastify) {
                         'bookings.updated_at',
                         'goods_types.name as goods_type_name',
                         'users.name as shipper_name',
-                        'organizations.name as shipper_organization_name'
+                        'organizations.name as shipper_organization_name',
+                        'accepted_bid.amount as accepted_bid_amount'
                     ])
                 } else {
                     // Shippers or organization members can see full booking details including budget
@@ -763,7 +832,8 @@ export default async function bookingRoutes(fastify) {
                         'bookings.closed_at',
                         'goods_types.name as goods_type_name',
                         'users.name as shipper_name',
-                        'organizations.name as shipper_organization_name'
+                        'organizations.name as shipper_organization_name',
+                        'accepted_bid.amount as accepted_bid_amount'
                     ])
                 }
 
